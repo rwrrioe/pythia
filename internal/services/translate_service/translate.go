@@ -3,42 +3,37 @@ package translate
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
-	"os"
 
-	"github.com/joho/godotenv"
+	"github.com/rwrrioe/pythia/internal/domain/entities"
+	"github.com/rwrrioe/pythia/internal/domain/models"
 	"google.golang.org/genai"
 )
 
-type TranslateService struct{}
-
-func NewTranslateService() *TranslateService {
-	return &TranslateService{}
+type TranslateService struct {
+	client genai.Client
+	model  string
 }
 
-type UnknownWord struct {
-	Word        string `json:"word"`
-	Translation string `json:"translation"`
-}
-
-// find unknown words from the text
-func (t *TranslateService) FindUnknown(ctx context.Context, text string) ([]UnknownWord, error) {
-	var words []UnknownWord
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	if apiKey == "" {
-		log.Fatal("GEMINI_API_KEY is not set")
-	}
-
+func NewTranslateService(ctx context.Context, model string) (*TranslateService, error) {
 	client, err := genai.NewClient(ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load client: %w", err)
+		return nil, err
 	}
+
+	return &TranslateService{client: *client, model: model}, nil
+}
+
+const defaultPrompt string = `Определи сложные или неизвестные слова в тексте на основе уровня "%s" и длительности изучения "%s".
+Дай перевод на русский в формате JSON [{"word": "...", "translation": "..."}].
+Текст: %s`
+
+func (t *TranslateService) FindUnknownWords(ctx context.Context, req models.AnalyzeRequest) ([]entities.UnknownWord, error) {
+	if string(req.Text) == "" {
+		return nil, errors.New("empty text in request")
+	}
+	var words []entities.UnknownWord
 
 	config := &genai.GenerateContentConfig{
 		ResponseMIMEType: "application/json",
@@ -55,14 +50,10 @@ func (t *TranslateService) FindUnknown(ctx context.Context, text string) ([]Unkn
 		},
 	}
 
-	prompt := fmt.Sprint(`
-	Ты - ИИ агент, созданный для помощи изучающим немецкий и английский язык на уровнях A2 - B2. Пользователь отправляет текст с учебника, в понимании которого он испытывает трудности.
-	Ты должен найти возможно неизвестные пользователю слова на основе его уровня, учебника, длительности изучения языка. После того как ты нашел неизвестное слово, ты должен перевести его на русский язык с сохранением контекста.
-	Строго соблюдай структуру и не добавляй лишнего.
-	`, text)
+	prompt := fmt.Sprintf(defaultPrompt, req.Level, req.Durating, req.Text)
 
-	result, err := client.Models.GenerateContent(ctx,
-		"gemini-2.5-flash",
+	result, err := t.client.Models.GenerateContent(ctx,
+		t.model,
 		genai.Text(prompt),
 		config,
 	)
@@ -73,6 +64,10 @@ func (t *TranslateService) FindUnknown(ctx context.Context, text string) ([]Unkn
 
 	if err := json.Unmarshal([]byte(result.Text()), &words); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal AI response: %w", err)
+	}
+
+	for i := range words {
+		words[i].Lang = req.Lang
 	}
 
 	return words, nil
