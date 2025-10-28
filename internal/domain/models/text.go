@@ -1,6 +1,8 @@
 package models
 
+import "github.com/google/uuid"
+
 type Text struct {
-	Text string
-	UUID int
+	Text []byte
+	UUID uuid.UUID
 }
