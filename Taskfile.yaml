@@ -1,0 +1,29 @@
+version: '3'
+tasks:
+  default:
+    cmds:
+      - task: generate
+  generate:
+    aliases:
+      - gen
+    desc: "Generet code from proto files"
+    cmds:
+      - mkdir -p ./shared/gen/go
+      
+      #Go code generation
+      - protoc -I proto /shared/protos/proto/ocr/*.proto --go_out=./gen/go --go_opt=paths=source_relative --go-grpc_out=./gen/go --go-grpc_opt=paths=source_relative
+      
+      #Python code generation
+      - python -m grpc_tools.protoc -I ./shared/protos --python_out=./shared/gen/python --grpc_python_out=./shared/gen/python ./shared/protos/proto/ocr*.proto
+  dockerdev-up:
+    aliases:
+      - dev-up
+    desc: "Run development environment with Docker Compose"
+    cmds:
+      - "docker compose -f ./deployments/docker-compose-dev.yml up --build"
+  dockerdev-down:
+    aliases:
+      - dev-down
+    desc: "Stop development environment"
+    cmds:
+      - "docker compose -f ./deployments/docker-compose-dev.yml down"

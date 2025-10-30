@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package ocrv1;
+
+option go_package = "github.com/rwrrioe/protos/gen/go/ocr;ocrv1";
+
+service OCRService {
+    rpc Recognize(OCRRequest) returns (OCRResponse);
+}
+
+message OCRRequest {
+    bytes image_data = 1;
+    string lang = 2;
+}
+
+message OCRResponse {
+    string text = 1;
+}
