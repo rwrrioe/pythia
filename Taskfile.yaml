@@ -1,11 +1,11 @@
 version: '3'
 
 tasks:
-  generate:
-    aliases:
-      - gen
-    desc: "Generate Go and Python code from proto files"
+  default:
     cmds:
+      - task: generate
+  generate:
+   cmds:
       - echo "🚀 Generating protobuf code..."
 
       # Создание директорий для вывода
@@ -32,3 +32,19 @@ tasks:
         ./shared/protos/proto/ocr/*.proto
 
       - echo "✅ Protobuf generation completed successfully."
+
+  dockerdev-up:
+    aliases:
+      - dev-up
+    desc: "Run development environment with Docker Compose"
+    cmds:
+      - echo "🚀 Starting dev environment..."
+      - docker compose -f ./deployments/docker-compose-dev.yml up --build
+
+  dockerdev-down:
+    aliases:
+      - dev-down
+    desc: "Stop development environment"
+    cmds:
+      - echo "🧹 Stopping dev environment..."
+      - docker compose -f ./deployments/docker-compose-dev.yml down
