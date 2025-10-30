@@ -1,6 +1,6 @@
-module github.com/rwrrioe/pythia/protos
+module github.com/rwrrioe/pythia/shared
 
-go 1.24.3
+go 1.25.3
 
 require (
 	golang.org/x/net v0.42.0 // indirect
