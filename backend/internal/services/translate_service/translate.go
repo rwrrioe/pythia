@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rwrrioe/pythia/internal/domain/entities"
-	"github.com/rwrrioe/pythia/internal/domain/models"
+	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
+	"github.com/rwrrioe/pythia/backend/internal/domain/models"
 	"google.golang.org/genai"
 )
 

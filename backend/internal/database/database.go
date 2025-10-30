@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rwrrioe/pythia/internal/domain/models"
+	"github.com/rwrrioe/pythia/backend/internal/domain/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

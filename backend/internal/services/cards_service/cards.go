@@ -3,7 +3,7 @@ package cards
 import (
 	"context"
 
-	"github.com/rwrrioe/pythia/internal/domain/entities"
+	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 )
 
 type CardsService struct{}

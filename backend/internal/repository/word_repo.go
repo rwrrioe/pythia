@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/rwrrioe/pythia/internal/domain/models"
+	"github.com/rwrrioe/pythia/backend/internal/domain/models"
 	"gorm.io/gorm"
 )
 

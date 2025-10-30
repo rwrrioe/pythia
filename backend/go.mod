@@ -1,4 +1,4 @@
-module github.com/rwrrioe/pythia
+module github.com/rwrrioe/pythia/backend
 
 go 1.24.3
 

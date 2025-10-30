@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/rwrrioe/pythia/internal/domain/models"
-	translate "github.com/rwrrioe/pythia/internal/services/translate_service"
+	"github.com/rwrrioe/pythia/backend/internal/domain/models"
+	translate "github.com/rwrrioe/pythia/backend/internal/services/translate_service"
 )
 
 func main() {
