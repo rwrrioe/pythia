@@ -1,29 +1,53 @@
 version: '3'
+
 tasks:
   default:
     cmds:
       - task: generate
+
   generate:
     aliases:
       - gen
-    desc: "Generet code from proto files"
+    desc: "Generate Go and Python code from proto files"
     cmds:
-      - mkdir -p ./shared/gen/go
+      - echo "Generating protobuf code..."
       
-      #Go code generation
-      - protoc -I proto /shared/protos/proto/ocr/*.proto --go_out=./gen/go --go_opt=paths=source_relative --go-grpc_out=./gen/go --go-grpc_opt=paths=source_relative
-      
-      #Python code generation
-      - python -m grpc_tools.protoc -I ./shared/protos --python_out=./shared/gen/python --grpc_python_out=./shared/gen/python ./shared/protos/proto/ocr*.proto
+      # Создаём директории для вывода
+      - mkdir -p ./shared/gen/go ./shared/gen/python
+
+      # --------------------
+      # Go code generation
+      # --------------------
+      - >
+        protoc -I ./shared/protos/proto \
+        ./shared/protos/proto/ocr/*.proto \
+        --plugin=protoc-gen-go=$(go env GOPATH)/bin/protoc-gen-go \
+        --plugin=protoc-gen-go-grpc=$(go env GOPATH)/bin/protoc-gen-go-grpc \
+        --go_out=./shared/gen/go --go_opt=paths=source_relative \
+        --go-grpc_out=./shared/gen/go --go-grpc_opt=paths=source_relative
+
+      # --------------------
+      # Python code generation
+      # --------------------
+      - pip show grpcio-tools >/dev/null 2>&1 || pip install grpcio-tools
+      - python -m grpc_tools.protoc -I ./shared/protos/proto \
+        --python_out=./shared/gen/python --grpc_python_out=./shared/gen/python \
+        ocr/*.proto
+
+      - echo "Protobuf generation completed successfully."
+
   dockerdev-up:
     aliases:
       - dev-up
     desc: "Run development environment with Docker Compose"
     cmds:
-      - "docker compose -f ./deployments/docker-compose-dev.yml up --build"
+      - echo "Starting dev environment..."
+      - docker compose -f ./deployments/docker-compose-dev.yml up --build
+
   dockerdev-down:
     aliases:
       - dev-down
     desc: "Stop development environment"
     cmds:
-      - "docker compose -f ./deployments/docker-compose-dev.yml down"
+      - echo "Stopping dev environment..."
+      - docker compose -f ./deployments/docker-compose-dev.yml down
