@@ -14,5 +14,5 @@ message OCRRequest {
 }
 
 message OCRResponse {
-    string text = 1;
+    repeated string text = 1;
 }
