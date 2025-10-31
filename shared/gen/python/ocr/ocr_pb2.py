@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rocr/ocr.proto\x12\x05ocrv1\".\n\nOCRRequest\x12\x12\n\nimage_data\x18\x01 \x01(\x0c\x12\x0c\n\x04lang\x18\x02 \x01(\t\"\x1b\n\x0bOCRResponse\x12\x0c\n\x04text\x18\x01 \x01(\t2@\n\nOCRService\x12\x32\n\tRecognize\x12\x11.ocrv1.OCRRequest\x1a\x12.ocrv1.OCRResponseB3Z1github.com/rwrrioe/shared/protos/gen/go/ocr;ocrv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rocr/ocr.proto\x12\x05ocrv1\".\n\nOCRRequest\x12\x12\n\nimage_data\x18\x01 \x01(\x0c\x12\x0c\n\x04lang\x18\x02 \x01(\t\"\x1b\n\x0bOCRResponse\x12\x0c\n\x04text\x18\x01 \x03(\t2@\n\nOCRService\x12\x32\n\tRecognize\x12\x11.ocrv1.OCRRequest\x1a\x12.ocrv1.OCRResponseB3Z1github.com/rwrrioe/shared/protos/gen/go/ocr;ocrv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)

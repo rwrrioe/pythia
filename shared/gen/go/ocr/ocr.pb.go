@@ -75,7 +75,7 @@ func (x *OCRRequest) GetLang() string {
 
 type OCRResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
+	Text          []string               `protobuf:"bytes,1,rep,name=text,proto3" json:"text,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -110,11 +110,11 @@ func (*OCRResponse) Descriptor() ([]byte, []int) {
 	return file_proto_ocr_ocr_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *OCRResponse) GetText() string {
+func (x *OCRResponse) GetText() []string {
 	if x != nil {
 		return x.Text
 	}
-	return ""
+	return nil
 }
 
 var File_proto_ocr_ocr_proto protoreflect.FileDescriptor
@@ -128,7 +128,7 @@ const file_proto_ocr_ocr_proto_rawDesc = "" +
 	"image_data\x18\x01 \x01(\fR\timageData\x12\x12\n" +
 	"\x04lang\x18\x02 \x01(\tR\x04lang\"!\n" +
 	"\vOCRResponse\x12\x12\n" +
-	"\x04text\x18\x01 \x01(\tR\x04text2@\n" +
+	"\x04text\x18\x01 \x03(\tR\x04text2@\n" +
 	"\n" +
 	"OCRService\x122\n" +
 	"\tRecognize\x12\x11.ocrv1.OCRRequest\x1a\x12.ocrv1.OCRResponseB3Z1github.com/rwrrioe/shared/protos/gen/go/ocr;ocrv1b\x06proto3"
