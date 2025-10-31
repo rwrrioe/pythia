@@ -1,5 +1,6 @@
 import io
 import grpc
+import json
 from paddleocr import PaddleOCR
 from shared.gen.python.ocr import ocr_pb2, ocr_pb2_grpc
 
@@ -19,14 +20,14 @@ class OCRServiceServicer(ocr_pb2_grpc.OCRServiceServicer):
             with io.BytesIO(image_data) as img_buf:
                 img_bytes = img_buf.read()
 
-            results = self.ocr.ocr(img_bytes, cls=True)
+            results = self.ocr.predict(img_bytes, cls=True)
+            if isinstance(results, list):
+                data = results[0]
+            else:
+                data = results
 
-            text_list = []
-            for line in results:
-                for _, (text, confidence) in line:
-                    text_list.append(text)
-
-            return ocr_pb2.OCRResponse(text=text_list)
+            texts = data.get("rec_texts", [])
+            return ocr_pb2.OCRResponse(text=texts)
 
         except Exception as e:
             context.set_details(str(e))
