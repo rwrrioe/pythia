@@ -8,20 +8,13 @@ tasks:
   generate:
     desc: "Generate Go and Python code from proto files"
     cmds:
-      - echo "🚀 Generating protobuf code..."
-      # Создаем директории для сгенерированных файлов
-
-      # --------------------
+      - echo "Start generating protobuf code"
       # Go code generation
-      # --------------------
-      - >
-
-      # --------------------
+      - protoc -I ./protos protos/proto/ocr/ocr.proto --go_out=./gen/go/ --go_opt=paths=source_relative --go-grpc_out=./gen/go/ --go-grpc_opt=paths=source_relative
       # Python code generation
-      # --------------------
       - python -m pip install --quiet --exists-action=i grpcio-tools
       - >
        python -m grpc_tools.protoc -I ./protos/proto --python_out=./gen/python --grpc_python_out=./gen/python ./protos/proto/ocr/ocr.proto
 
 
-      - echo "✅ Protobuf generation completed successfully."
+      - echo "Protobuf generation completed successfully."
