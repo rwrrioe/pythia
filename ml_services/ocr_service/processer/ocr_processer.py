@@ -1,6 +1,8 @@
 import io
 import grpc
 import json
+from PIL import Image
+import numpy as np
 from paddleocr import PaddleOCR
 from shared.gen.python.ocr import ocr_pb2, ocr_pb2_grpc
 
@@ -20,7 +22,9 @@ class OCRServiceServicer(ocr_pb2_grpc.OCRServiceServicer):
             with io.BytesIO(image_data) as img_buf:
                 img_bytes = img_buf.read()
 
-            results = self.ocr.predict(img_bytes, cls=True)
+            img = Image.open(img_bytes)
+            img = np.array(img)
+            results = self.ocr.predict(img, cls=True)
             if isinstance(results, list):
                 data = results[0]
             else:
