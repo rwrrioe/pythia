@@ -1,8 +1,8 @@
 services:
   backend:
     build:
-      context: ../backend
-      dockerfile: ./Dockerfile
+      context: ..
+      dockerfile: backend/Dockerfile
     container_name: pythia_backend
     depends_on:
       - ocr
@@ -17,14 +17,19 @@ services:
       - pythia_net
   ocr:
     build:
-      context: ../ml-services/ocr-service
-      dockerfile: ./Dockerfile
+      context: ../ml_services/ocr_service
+      dockerfile: Dockerfile
+    container_name: pythia_ocr
     deploy:
       resources:
-        reservation:
+        reservations:
           devices:
-            - capabilities: [gpu]
-    container_name: pythia_ocr
+           - driver: nvidia
+             count: all
+             capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     ports:
       - "50051:50051"
     networks:

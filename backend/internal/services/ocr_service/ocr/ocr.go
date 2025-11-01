@@ -3,7 +3,7 @@ package ocr
 import (
 	"context"
 
-	pb "github.com/rwrrioe/pythia/backend/shared/gen/go/ocr"
+	pb "github.com/rwrrioe/pythia/shared/gen/go/ocr"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -12,26 +12,32 @@ type ImageProcesser interface {
 	ProcessImage(ctx context.Context, imageData []byte, lang string) ([]string, error)
 }
 
-type OCRProcessor struct{}
+type OCRProcessor struct {
+	client pb.OCRServiceClient
+	conn   *grpc.ClientConn
+}
 
-func NewOCRProcessor() *OCRProcessor {
-	return &OCRProcessor{}
+func NewOCRProcessor(add string) (*OCRProcessor, error) {
+	conn, err := grpc.NewClient(
+		add,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return nil, err
+	}
+	client := pb.NewOCRServiceClient(conn)
+	return &OCRProcessor{
+		client: client,
+		conn:   conn,
+	}, nil
+}
+
+func (p *OCRProcessor) Close() error {
+	return p.conn.Close()
 }
 
 func (p *OCRProcessor) RecognizeText(ctx context.Context, imageData []byte, lang string) ([]string, error) {
-	conn, err := grpc.NewClient(
-		"localhost:50051",
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-
-	if err != nil {
-		return nil, nil
-	}
-	defer conn.Close()
-
-	client := pb.NewOCRServiceClient(conn)
-
-	resp, err := client.Recognize(ctx, &pb.OCRRequest{
+	resp, err := p.client.Recognize(ctx, &pb.OCRRequest{
 		ImageData: []byte(imageData),
 		Lang:      lang,
 	})

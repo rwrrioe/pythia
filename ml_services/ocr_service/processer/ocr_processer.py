@@ -1,6 +1,5 @@
 import io
 import grpc
-import json
 from PIL import Image
 import numpy as np
 from paddleocr import PaddleOCR

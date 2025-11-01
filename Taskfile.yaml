@@ -6,7 +6,7 @@ tasks:
       - task: generate
   generate:
    cmds:
-      - echo "🚀 Generating protobuf code..."
+      - echo "Generating protobuf code..."
 
       # Создание директорий для вывода
       - python -c "import os; os.makedirs('./shared/gen/go', exist_ok=True); os.makedirs('./shared/gen/python', exist_ok=True)"
@@ -31,20 +31,20 @@ tasks:
         --grpc_python_out=./shared/gen/python \
         ./shared/protos/proto/ocr/*.proto
 
-      - echo "✅ Protobuf generation completed successfully."
+      - echo "Protobuf generation completed successfully."
 
   dockerdev-up:
     aliases:
       - dev-up
     desc: "Run development environment with Docker Compose"
     cmds:
-      - echo "🚀 Starting dev environment..."
-      - docker compose -f ./deployments/docker-compose-dev.yml up --build
+      - echo "Starting dev environment..."
+      - docker compose -f ./deployments/docker-compose-dev.yml build --no-cache 
 
   dockerdev-down:
     aliases:
       - dev-down
     desc: "Stop development environment"
     cmds:
-      - echo "🧹 Stopping dev environment..."
+      - echo  "Stopping dev environment..."
       - docker compose -f ./deployments/docker-compose-dev.yml down

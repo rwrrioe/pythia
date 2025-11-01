@@ -1,4 +1,4 @@
-module github.com/rwrrioe/pythia/backend/shared
+module github.com/rwrrioe/pythia/shared
 
 go 1.25.3
 
