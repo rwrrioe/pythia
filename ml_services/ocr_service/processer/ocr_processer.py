@@ -20,10 +20,9 @@ class OCRServiceServicer(ocr_pb2_grpc.OCRServiceServicer):
                 self.ocr = PaddleOCR(lang=lang)
 
             with io.BytesIO(image_data) as img_buf:
-                img_bytes = img_buf.read()
+                img = Image.open(img_buf)
+                img = np.array(img)
 
-            img = Image.open(img_bytes)
-            img = np.array(img)
             results = self.ocr.predict(img, cls=True)
             if isinstance(results, list):
                 data = results[0]
