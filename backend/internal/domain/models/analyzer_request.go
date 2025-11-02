@@ -1,7 +1,7 @@
 package models
 
 type AnalyzeRequest struct {
-	Text     []byte
+	Text     []string
 	Level    string
 	Lang     string
 	Durating string

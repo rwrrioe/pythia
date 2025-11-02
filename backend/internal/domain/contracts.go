@@ -7,12 +7,8 @@ import (
 	"github.com/rwrrioe/pythia/backend/internal/domain/models"
 )
 
-type ImageProcessor interface {
-	ProcessImage(ctx context.Context, imagePath string, lang string) (*models.OCRResult, error)
-}
-
-type WordTranslator interface {
-	FindUnknownWords(ctx context.Context, text models.Text) ([]models.Word, error)
+type ImageProcesser interface {
+	ProcessImage(ctx context.Context, imageData []byte, lang string) ([]string, error)
 }
 
 type CardsBuilder interface {
@@ -21,4 +17,5 @@ type CardsBuilder interface {
 
 type TranslateProvider interface {
 	FindUnknownWords(ctx context.Context, req models.AnalyzeRequest) ([]entities.UnknownWord, error)
+	WriteExamples(ctx context.Context, words []entities.UnknownWord, req models.AnalyzeRequest) (*[]entities.Example, error)
 }
