@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+FROM nvidia/cuda:12.9.0-runtime-ubuntu22.04
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -7,16 +7,17 @@ RUN apt-get update && \
 
 WORKDIR /app
 
+RUN pip3 install --upgrade pip && \
+    pip install paddlepaddle-gpu==3.2.1 \
+    -i https://www.paddlepaddle.org.cn/packages/stable/cu129/
+
 COPY requirements.txt .
 
-RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    pip3 install --no-cache-dir paddlepaddle-gpu==2.5.2.post120 -i https://mirror.baidu.com/pypi/simple && \
-    pip3 install --no-cache-dir paddleocr==2.7.0.3
-
+RUN pip3 install -r requirements.txt
 
 COPY . .
-
+ENV PYTHONPATH="${PYTHONPATH}:/app:/app/shared"
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python3", "main.py"]
+CMD ["python3", "ml_services/ocr_service/main.py"]
+
