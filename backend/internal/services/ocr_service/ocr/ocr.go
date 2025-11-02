@@ -8,35 +8,31 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type ImageProcesser interface {
-	ProcessImage(ctx context.Context, imageData []byte, lang string) ([]string, error)
-}
-
-type OCRProcessor struct {
+type OCRProcesser struct {
 	client pb.OCRServiceClient
 	conn   *grpc.ClientConn
 }
 
-func NewOCRProcessor(add string) (*OCRProcessor, error) {
+func NewOCRProcessor(add string) (OCRProcesser, error) {
 	conn, err := grpc.NewClient(
 		add,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		return nil, err
+		return OCRProcesser{}, err
 	}
 	client := pb.NewOCRServiceClient(conn)
-	return &OCRProcessor{
+	return OCRProcesser{
 		client: client,
 		conn:   conn,
 	}, nil
 }
 
-func (p *OCRProcessor) Close() error {
+func (p *OCRProcesser) Close() error {
 	return p.conn.Close()
 }
 
-func (p *OCRProcessor) RecognizeText(ctx context.Context, imageData []byte, lang string) ([]string, error) {
+func (p *OCRProcesser) ProcessImage(ctx context.Context, imageData []byte, lang string) ([]string, error) {
 	resp, err := p.client.Recognize(ctx, &pb.OCRRequest{
 		ImageData: []byte(imageData),
 		Lang:      lang,
