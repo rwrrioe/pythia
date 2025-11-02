@@ -1,6 +1,6 @@
 import grpc
 from concurrent import futures
-from ml_services.ocr_service.processer.ocr_processer import OCRServiceServicer
+from processer.ocr_processer import OCRServiceServicer
 from shared.gen.python.ocr import ocr_pb2_grpc
 
 
