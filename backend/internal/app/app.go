@@ -1,31 +1,40 @@
 package app
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
-	"github.com/rwrrioe/pythia/backend/internal/domain"
+	"github.com/rwrrioe/pythia/backend/internal/services"
 	"github.com/rwrrioe/pythia/backend/internal/transport/rest"
-	rest_handlers "github.com/rwrrioe/pythia/backend/internal/transport/rest/handlers"
 	"github.com/rwrrioe/pythia/backend/internal/transport/ws"
-	ws_handlers "github.com/rwrrioe/pythia/backend/internal/transport/ws/handlers"
+	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
 )
 
 type App struct {
-	ocr domain.ImageProcesser
-	// transl     domain.TranslateProvider
-	// flashCards domain.CardsBuilder
-	router *gin.Engine
+	services     *services.Services
+	wsHandlers   *ws.Handlers
+	restHandlers *rest.Handlers
+	router       *gin.Engine
 }
 
-func New(ocr domain.ImageProcesser, wsHandler *ws_handlers.WebSocketOCRHandler, restHandler *rest_handlers.OCRHandler) *App {
+func New(ctx context.Context) (*App, error) {
 	router := gin.Default()
-	rest.RegisterRoutes(router, restHandler)
-	ws.RegisterRoutes(router, wsHandler)
-	return &App{
-		ocr: ocr,
-		// transl:     transl,
-		// flashCards: flashCards,
-		router: router,
+	services, err := services.New(ctx, "gemini-2.5-flash", "ocr:9080")
+	if err != nil {
+		return nil, err
 	}
+	hub := hub.NewWebSocketHub()
+	wsHandlers := ws.New(services, hub)
+	ws.RegisterRoutes(router, wsHandlers)
+	restHandlers := rest.New(services, hub)
+	rest.RegisterRoutes(router, restHandlers)
+
+	return &App{
+		services:     services,
+		wsHandlers:   wsHandlers,
+		restHandlers: restHandlers,
+		router:       router,
+	}, nil
 }
 
 func (a *App) Run(addr string) error {
