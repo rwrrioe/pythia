@@ -13,16 +13,16 @@ type OCRProcesser struct {
 	conn   *grpc.ClientConn
 }
 
-func NewOCRProcessor(add string) (OCRProcesser, error) {
+func NewOCRProcessor(add string) (*OCRProcesser, error) {
 	conn, err := grpc.NewClient(
 		add,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		return OCRProcesser{}, err
+		return nil, err
 	}
 	client := pb.NewOCRServiceClient(conn)
-	return OCRProcesser{
+	return &OCRProcesser{
 		client: client,
 		conn:   conn,
 	}, nil
