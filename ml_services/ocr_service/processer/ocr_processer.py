@@ -8,27 +8,22 @@ from shared.gen.python.ocr import ocr_pb2, ocr_pb2_grpc
 
 class OCRServiceServicer(ocr_pb2_grpc.OCRServiceServicer):
     def __init__(self):
-        self.ocr = PaddleOCR(lang='en')
+        self.ocr = PaddleOCR(use_angle_cls=True, lang='de')
 
     def Recognize(self, request, context):
         try:
-            image_data = request.image_data
-            lang = request.lang or 'en'
-
-            if lang != self.ocr.lang:
-                self.ocr = PaddleOCR(lang=lang)
-
-            with io.BytesIO(image_data) as img_buf:
-                img = Image.open(img_buf)
+            with io.BytesIO(request.image_data) as img_buf:
+                img = Image.open(img_buf).convert("RGB")
                 img = np.array(img)
 
-            results = self.ocr.predict(img, cls=True)
-            if isinstance(results, list):
-                data = results[0]
-            else:
-                data = results
+            results = self.ocr.predict(img)
+    
+            if not results:
+                return ocr_pb2.OCRResponse(text=[])
 
-            texts = data.get("rec_texts", [])
+            texts = results[0].get("rec_texts", [])
+
+
             return ocr_pb2.OCRResponse(text=texts)
 
         except Exception as e:
