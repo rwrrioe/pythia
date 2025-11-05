@@ -8,7 +8,7 @@ def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
     ocr_pb2_grpc.add_OCRServiceServicer_to_server(OCRServiceServicer(), server)
 
-    port = 9080
+    port = 50051
     server.add_insecure_port(f"[::]:{port}")
 
     print(f"OCR gRPC server started on port {port}")
