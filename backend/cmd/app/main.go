@@ -1,23 +1,29 @@
 package main
 
 import (
-	"log"
-
-	"github.com/gin-gonic/gin"
+	"github.com/rwrrioe/pythia/backend/internal/app"
 	"github.com/rwrrioe/pythia/backend/internal/services/ocr_service/ocr"
-	"github.com/rwrrioe/pythia/backend/internal/transport/ws"
+	rest_handlers "github.com/rwrrioe/pythia/backend/internal/transport/rest/handlers"
 	ws_handlers "github.com/rwrrioe/pythia/backend/internal/transport/ws/handlers"
+	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
 )
 
 func main() {
-	ocrClient, err := ocr.NewOCRProcessor("localhost:50051")
+	ocrProcessor, err := ocr.NewOCRProcessor()
 	if err != nil {
-		log.Print(err.Error())
+		panic(err)
 	}
+	defer ocrProcessor.Close()
 
-	r := gin.Default()
-	hub := ws.NewWebSocketHub()
-	wsHandler := ws_handlers.NewWebSocketHandler(ocrClient, hub)
-	r.GET("/ws/ocr", wsHandler.WebSocket)
-	r.POST("/api/ocr", wsHandler.Upload)
+	wsHub := hub.NewWebSocketHub()
+
+	wsHandler := ws_handlers.NewWebSocketHandler(ocrProcessor, wsHub)
+	restHandler := rest_handlers.NewOCRHandler(ocrProcessor, wsHub)
+
+	app := app.New(
+		ocrProcessor,
+		wsHandler,
+		restHandler,
+	)
+	app.MustRun()
 }

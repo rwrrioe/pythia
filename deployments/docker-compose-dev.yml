@@ -10,7 +10,8 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:1234@db:5432/pythiadb?sslmode=disable
       - OCR_SERVICE_HOST=ocr
-      - OCR_SERVICE_PORT=50051
+      - OCR_SERVICE_PORT=9080
+      - GIN_MODE=release
     ports:
       - "8080:8080"
     networks:
@@ -31,7 +32,9 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     ports:
-      - "50051:50051"
+      - "9080:9080"
+    volumes:
+      - ../shared:/app/shared
     networks:
       - pythia_net
   db:

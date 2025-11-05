@@ -1,6 +1,7 @@
 package ws_hub
 
 import (
+	"log"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -26,7 +27,12 @@ func (h *WebSocketHub) Notify(id string, payload interface{}) {
 	defer h.mu.Unlock()
 
 	if conn, ok := h.clients[id]; ok {
-		conn.WriteJSON(payload)
+		if err := conn.WriteJSON(payload); err != nil {
+			log.Printf("Failed to send WS message to %s: %v", id, err)
+
+			conn.Close()
+			delete(h.clients, id)
+		}
 	}
 }
 
