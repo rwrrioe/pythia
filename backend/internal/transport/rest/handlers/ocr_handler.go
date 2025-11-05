@@ -44,14 +44,15 @@ func (h *OCRHandler) Upload(c *gin.Context) {
 	}
 
 	go func() {
-		h.ws.Notify(taskID, gin.H{"status": "processing"})
-
+		h.ws.Notify(taskID, gin.H{
+			"status": "processing",
+			"stage":  "ocr",
+		})
 		texts, err := h.ocr.ProcessImage(c, data, "de")
 		if err != nil {
 			h.ws.Notify(taskID, gin.H{"status": "error", "error": err.Error()})
 			return
 		}
-
 		h.ws.Notify(taskID, gin.H{"status": "done", "rec_texts": texts})
 	}()
 	c.JSON(http.StatusAccepted, gin.H{"task_id": taskID})
