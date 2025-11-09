@@ -2,9 +2,11 @@ package app
 
 import (
 	"context"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rwrrioe/pythia/backend/internal/services"
+	taskstorage "github.com/rwrrioe/pythia/backend/internal/services/task_storage"
 	"github.com/rwrrioe/pythia/backend/internal/transport/rest"
 	"github.com/rwrrioe/pythia/backend/internal/transport/ws"
 	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
@@ -19,14 +21,15 @@ type App struct {
 
 func New(ctx context.Context) (*App, error) {
 	router := gin.Default()
-	services, err := services.New(ctx, "gemini-2.5-flash", "ocr:9080")
+	services, err := services.New(ctx, "gemini-2.5-flash-lite", "ocr:9080")
 	if err != nil {
 		return nil, err
 	}
+	redisClient := taskstorage.NewRedisTaskStorage("redis:6379", time.Hour)
 	hub := hub.NewWebSocketHub()
 	wsHandlers := ws.New(services, hub)
 	ws.RegisterRoutes(router, wsHandlers)
-	restHandlers := rest.New(services, hub)
+	restHandlers := rest.New(services, hub, redisClient)
 	rest.RegisterRoutes(router, restHandlers)
 
 	return &App{
@@ -42,8 +45,7 @@ func (a *App) Run() error {
 }
 
 func (a *App) MustRun() {
-	err := a.Run()
-	if err != nil {
+	if err := a.Run(); err != nil {
 		panic(err)
 	}
 }
