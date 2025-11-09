@@ -1,29 +1,20 @@
 package main
 
 import (
+	"context"
+	"log"
+	"os"
+
 	"github.com/rwrrioe/pythia/backend/internal/app"
-	"github.com/rwrrioe/pythia/backend/internal/services/ocr_service/ocr"
-	rest_handlers "github.com/rwrrioe/pythia/backend/internal/transport/rest/handlers"
-	ws_handlers "github.com/rwrrioe/pythia/backend/internal/transport/ws/handlers"
-	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
 )
 
 func main() {
-	ocrProcessor, err := ocr.NewOCRProcessor()
+	_ = os.Getenv("GEMINI_API_KEY")
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+	app, err := app.New(ctx)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	defer ocrProcessor.Close()
-
-	wsHub := hub.NewWebSocketHub()
-
-	wsHandler := ws_handlers.NewWebSocketHandler(ocrProcessor, wsHub)
-	restHandler := rest_handlers.NewOCRHandler(ocrProcessor, wsHub)
-
-	app := app.New(
-		ocrProcessor,
-		wsHandler,
-		restHandler,
-	)
 	app.MustRun()
 }
