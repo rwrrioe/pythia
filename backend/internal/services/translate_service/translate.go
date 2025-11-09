@@ -9,6 +9,7 @@ import (
 
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	"github.com/rwrrioe/pythia/backend/internal/domain/models"
+	taskstorage "github.com/rwrrioe/pythia/backend/internal/services/task_storage"
 	"google.golang.org/genai"
 )
 
@@ -39,8 +40,8 @@ const examplePrompt string = `
 Дай перевод на русский в формате JSON [{"word": "...", "example": "..."}].
 Текст: %s, слова %s`
 
-func (t *TranslateService) FindUnknownWords(ctx context.Context, req models.AnalyzeRequest) ([]entities.UnknownWord, error) {
-	if req.Text == nil {
+func (t *TranslateService) FindUnknownWords(ctx context.Context, task *taskstorage.TaskDTO, req models.AnalyzeRequest) (*[]entities.UnknownWord, error) {
+	if task.OCRText == nil {
 		return nil, errors.New("empty text in request")
 	}
 	var words []entities.UnknownWord
@@ -59,8 +60,8 @@ func (t *TranslateService) FindUnknownWords(ctx context.Context, req models.Anal
 			},
 		},
 	}
-	text := strings.Join(req.Text, " ")
-	prompt := fmt.Sprintf(defaultPrompt, req.Level, req.Durating, text)
+	txt := strings.Join(*task.OCRText, " ")
+	prompt := fmt.Sprintf(defaultPrompt, req.Level, req.Durating, txt)
 
 	result, err := t.client.Models.GenerateContent(ctx,
 		t.model,
@@ -80,11 +81,11 @@ func (t *TranslateService) FindUnknownWords(ctx context.Context, req models.Anal
 		words[i].Lang = req.Lang
 	}
 
-	return words, nil
+	return &words, nil
 }
 
-func (t *TranslateService) WriteExamples(ctx context.Context, words []entities.UnknownWord, req models.AnalyzeRequest) (*[]entities.Example, error) {
-	if req.Text == nil {
+func (t *TranslateService) WriteExamples(ctx context.Context, task *taskstorage.TaskDTO, req models.AnalyzeRequest) (*[]entities.Example, error) {
+	if task.OCRText == nil {
 		return nil, errors.New("empty text in request")
 	}
 	var examples []entities.Example
@@ -104,13 +105,13 @@ func (t *TranslateService) WriteExamples(ctx context.Context, words []entities.U
 		},
 	}
 
-	text := strings.Join(req.Text, " ")
-	b, err := json.Marshal(words)
+	txt := strings.Join(*task.OCRText, " ")
+	b, err := json.Marshal(task.Words)
 	if err != nil {
 		return nil, err
 	}
 
-	prompt := fmt.Sprintf(examplePrompt, req.Level, req.Durating, text, string(b))
+	prompt := fmt.Sprintf(examplePrompt, req.Level, req.Durating, txt, string(b))
 	result, err := t.client.Models.GenerateContent(ctx,
 		t.model,
 		genai.Text(prompt),
