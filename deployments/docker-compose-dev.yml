@@ -1,17 +1,40 @@
 services:
+  redis:
+    image: redis:8
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis-data:/data
+      - ./redis-conf:/usr/local/etc/redis/redis.conf:ro
+    environment:
+      - TZ=UTC
+    restart : unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - pythia_net
   backend:
     build:
       context: ..
       dockerfile: backend/Dockerfile
+      ssh:
+        - default
     container_name: pythia_backend
     depends_on:
       - ocr
       - db
+      - redis
     environment:
       - DATABASE_URL=postgres://postgres:1234@db:5432/pythiadb?sslmode=disable
       - OCR_SERVICE_HOST=ocr
       - OCR_SERVICE_PORT=9080
       - GIN_MODE=release
+    env_file:
+      - .env
     ports:
       - "8080:8080"
     networks:
