@@ -7,16 +7,27 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rwrrioe/pythia/backend/internal/services/ocr_service/ocr"
+	taskstorage "github.com/rwrrioe/pythia/backend/internal/services/task_storage"
 	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
 )
 
 type OCRHandler struct {
-	ocr *ocr.OCRProcesser
-	ws  *hub.WebSocketHub
+	storage *taskstorage.RedisTaskStorage
+	ocr     *ocr.OCRProcesser
+	ws      *hub.WebSocketHub
 }
 
-func NewOCRHandler(ocr *ocr.OCRProcesser, ws *hub.WebSocketHub) *OCRHandler {
-	return &OCRHandler{ocr: ocr, ws: ws}
+func NewOCRHandler(ocr *ocr.OCRProcesser, ws *hub.WebSocketHub, storage *taskstorage.RedisTaskStorage) *OCRHandler {
+	return &OCRHandler{
+		ocr:     ocr,
+		ws:      ws,
+		storage: storage,
+	}
+}
+
+func (h *OCRHandler) respondOCRErr(c *gin.Context, err error, code int, message string) {
+	c.JSON(code, gin.H{message: err.Error()})
+	c.Abort()
 }
 
 func (h *OCRHandler) Upload(c *gin.Context) {
@@ -27,20 +38,19 @@ func (h *OCRHandler) Upload(c *gin.Context) {
 
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no file"})
+		h.respondOCRErr(c, err, http.StatusBadRequest, "no file")
 		return
 	}
 
 	file, err := fileHeader.Open()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error while fileheader open": err.Error()})
+		h.respondOCRErr(c, err, http.StatusInternalServerError, "can't open file")
 		return
 	}
 	defer file.Close()
 	data, err := io.ReadAll(file)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error while io read all": err.Error()})
-		return
+		h.respondOCRErr(c, err, http.StatusInternalServerError, "error while reading file")
 	}
 
 	go func() {
@@ -50,10 +60,17 @@ func (h *OCRHandler) Upload(c *gin.Context) {
 		})
 		texts, err := h.ocr.ProcessImage(c, data, "de")
 		if err != nil {
-			h.ws.Notify(taskID, gin.H{"status": "error", "error": err.Error()})
+			h.ws.Notify(taskID, gin.H{"status": "error", "error": err.Error(), "stage": "ocr"})
 			return
 		}
-		h.ws.Notify(taskID, gin.H{"status": "done", "rec_texts": texts})
+
+		err = h.storage.Save(c, taskID, &taskstorage.TaskDTO{OCRText: &texts})
+		if err != nil {
+			h.ws.Notify(taskID, gin.H{"status": "error", "error": err.Error(), "stage": "ocr"})
+			return
+		}
+
+		h.ws.Notify(taskID, gin.H{"status": "done", "stage": "ocr"})
 	}()
-	c.JSON(http.StatusAccepted, gin.H{"task_id": taskID})
+	c.JSON(http.StatusAccepted, gin.H{"task_id": taskID, "stage": "ocr"})
 }
