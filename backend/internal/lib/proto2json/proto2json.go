@@ -3,7 +3,7 @@ package lib
 import (
 	"encoding/json"
 
-	pb "github.com/rwrrioe/pythia/shared/gen/go/ocr"
+	pb "github.com/rwrrioe/pythia_protos/gen/go/ocr"
 )
 
 func ConvertProto(resp *pb.OCRResponse) ([]byte, error) {
