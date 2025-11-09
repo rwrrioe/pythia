@@ -14,19 +14,19 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-type OCRHandler struct {
+type Handler struct {
 	ocr *ocr.OCRProcesser
 	ws  *hub.WebSocketHub
 }
 
-func NewOCRHandler(ocr *ocr.OCRProcesser, ws *hub.WebSocketHub) *OCRHandler {
-	return &OCRHandler{
+func NewHandler(ocr *ocr.OCRProcesser, ws *hub.WebSocketHub) *Handler {
+	return &Handler{
 		ocr: ocr,
 		ws:  ws,
 	}
 }
 
-func (h *OCRHandler) WebSocket(c *gin.Context) {
+func (h *Handler) WebSocket(c *gin.Context) {
 	taskID := c.Query("task_id")
 	if taskID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
