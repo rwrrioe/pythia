@@ -9,25 +9,18 @@ import (
 
 type Handlers struct {
 	Services *services.Services
-	OCR      *ws_handlers.OCRHandler
-	Transl   *ws_handlers.TranslateHandler
+	Ws       *ws_handlers.Handler
 }
 
 func New(services *services.Services, ws *hub.WebSocketHub) *Handlers {
-	ocr := ws_handlers.NewOCRHandler(services.OCR, ws)
-	transl := ws_handlers.NewTranslateHandler(services.Translate, ws)
+	h := ws_handlers.NewHandler(services.OCR, ws)
 
 	return &Handlers{
 		Services: services,
-		OCR:      ocr,
-		Transl:   transl,
+		Ws:       h,
 	}
 }
 
 func RegisterRoutes(r *gin.Engine, handlers *Handlers) {
-	ws := r.Group("/ws")
-	{
-		ws.GET("/ocr", handlers.OCR.WebSocket)
-		ws.GET("/translate", handlers.Transl.WebSocket)
-	}
+	r.GET("/ws", handlers.Ws.WebSocket)
 }
