@@ -3,7 +3,7 @@ package ocr
 import (
 	"context"
 
-	pb "github.com/rwrrioe/pythia/shared/gen/go/ocr"
+	pb "github.com/rwrrioe/pythia_protos/gen/go/ocr"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
