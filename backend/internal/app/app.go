@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rwrrioe/pythia/backend/internal/services"
 	taskstorage "github.com/rwrrioe/pythia/backend/internal/services/task_storage"
@@ -25,6 +26,14 @@ func New(ctx context.Context) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 	redisClient := taskstorage.NewRedisTaskStorage("redis:6379", time.Hour)
 	hub := hub.NewWebSocketHub()
 	wsHandlers := ws.New(services, hub)
