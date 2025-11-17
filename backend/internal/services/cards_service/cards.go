@@ -6,13 +6,13 @@ import (
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 )
 
-type CardsService struct{}
+type FlashCardsService struct{}
 
-func NewCardsService() *CardsService {
-	return &CardsService{}
+func NewCardsService() *FlashCardsService {
+	return &FlashCardsService{}
 }
 
-func (c *CardsService) BuildCards(ctx context.Context, words []entities.UnknownWord) (*[]entities.FlashCardDTO, error) {
+func (c *FlashCardsService) BuildCards(ctx context.Context, words []entities.UnknownWord) (*[]entities.FlashCardDTO, error) {
 	dto := make([]entities.FlashCardDTO, len(words))
 	for k := range words {
 		dto[k].Translation = words[k].Translation
