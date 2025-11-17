@@ -19,3 +19,7 @@ type TranslateProvider interface {
 	FindUnknownWords(ctx context.Context, req models.AnalyzeRequest) ([]entities.UnknownWord, error)
 	WriteExamples(ctx context.Context, words []entities.UnknownWord, req models.AnalyzeRequest) (*[]entities.Example, error)
 }
+
+type TestsProvider interface {
+	QuizTest(ctx context.Context, words *[]entities.UnknownWord) *[]entities.QuizQuestion
+}
