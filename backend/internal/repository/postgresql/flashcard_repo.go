@@ -1,4 +1,4 @@
-package repository
+package postgresql
 
 import (
 	"context"
@@ -7,12 +7,6 @@ import (
 	"github.com/rwrrioe/pythia/backend/internal/domain/models"
 	"gorm.io/gorm"
 )
-
-type FlashCardRepo interface {
-	GetById(ctx context.Context, cardID int) (*models.FlashCard, error)
-	Save(ctx context.Context, card models.FlashCard) error
-	ListByUUID(ctx context.Context, batchID uuid.UUID) ([]models.FlashCard, error)
-}
 
 type FlashCardRepository struct {
 	db *gorm.DB

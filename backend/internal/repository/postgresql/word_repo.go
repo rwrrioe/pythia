@@ -1,4 +1,4 @@
-package repository
+package postgresql
 
 import (
 	"context"
@@ -6,11 +6,6 @@ import (
 	"github.com/rwrrioe/pythia/backend/internal/domain/models"
 	"gorm.io/gorm"
 )
-
-type WordRepo interface {
-	GetById(ctx context.Context, wordId int) (*models.Word, error)
-	Save(ctx context.Context, word models.Word) error
-}
 
 type WordRepository struct {
 	db *gorm.DB
