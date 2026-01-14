@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rwrrioe/pythia/backend/internal/domain/models"
 	learn "github.com/rwrrioe/pythia/backend/internal/services/learn_service"
-	taskstorage "github.com/rwrrioe/pythia/backend/internal/services/task_storage"
+	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
 	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
 )
 
@@ -46,6 +46,7 @@ func (h *LearnHandler) Quiz(c *gin.Context) {
 		})
 	}
 
+	///!!!!
 	go func() {
 		h.ws.Notify(req.TaskID, gin.H{
 			"status": "processing",
@@ -56,7 +57,7 @@ func (h *LearnHandler) Quiz(c *gin.Context) {
 			return
 		}
 
-		quiz := h.learn.QuizTest(c, task.Words)
+		quiz := h.learn.QuizTest(c, &task.Words)
 		h.ws.Notify(req.TaskID, gin.H{"status": "done", "quiz": quiz, "stage": "quiz"})
 	}()
 

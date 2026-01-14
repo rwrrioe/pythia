@@ -3,7 +3,7 @@ package rest
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/rwrrioe/pythia/backend/internal/services"
-	taskstorage "github.com/rwrrioe/pythia/backend/internal/services/task_storage"
+	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
 	rest_handlers "github.com/rwrrioe/pythia/backend/internal/transport/rest/handlers"
 	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
 )
