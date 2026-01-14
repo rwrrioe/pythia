@@ -7,7 +7,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rwrrioe/pythia/backend/internal/services"
-	taskstorage "github.com/rwrrioe/pythia/backend/internal/services/task_storage"
+	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
 	"github.com/rwrrioe/pythia/backend/internal/transport/rest"
 	"github.com/rwrrioe/pythia/backend/internal/transport/ws"
 	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"

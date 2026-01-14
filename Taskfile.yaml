@@ -8,21 +8,20 @@ tasks:
    cmds:
       - echo "Generating protobuf code..."
 
-      # Создание директорий для вывода
       - python -c "import os; os.makedirs('./shared/gen/go', exist_ok=True); os.makedirs('./shared/gen/python', exist_ok=True)"
 
-      # --------------------
-      # Go code generation
-      # --------------------
+
+      #Go code generation
+
       - >
         protoc -I ./shared/protos/proto \
         ./shared/protos/proto/ocr/*.proto \
         --go_out=./shared/gen/go --go_opt=paths=source_relative \
         --go-grpc_out=./shared/gen/go --go-grpc_opt=paths=source_relative
 
-      # --------------------
+
       # Python code generation
-      # --------------------
+
       - python -m pip install --quiet --exists-action=i grpcio-tools
       - >
         python -m grpc_tools.protoc \

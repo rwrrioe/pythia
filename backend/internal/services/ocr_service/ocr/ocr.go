@@ -3,43 +3,22 @@ package ocr
 import (
 	"context"
 
-	pb "github.com/rwrrioe/pythia_protos/gen/go/ocr"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	ocrclient "github.com/rwrrioe/pythia/backend/internal/clients/ocr/grpc"
 )
 
-type OCRProcesser struct {
-	client pb.OCRServiceClient
-	conn   *grpc.ClientConn
+type OCRService struct {
+	Client *ocrclient.Client
 }
 
-func NewOCRProcessor(add string) (*OCRProcesser, error) {
-	conn, err := grpc.NewClient(
-		add,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	client := pb.NewOCRServiceClient(conn)
-	return &OCRProcesser{
-		client: client,
-		conn:   conn,
-	}, nil
+func New(cl *ocrclient.Client) *OCRService {
+	return &OCRService{Client: cl}
 }
 
-func (p *OCRProcesser) Close() error {
-	return p.conn.Close()
-}
-
-func (p *OCRProcesser) ProcessImage(ctx context.Context, imageData []byte, lang string) ([]string, error) {
-	resp, err := p.client.Recognize(ctx, &pb.OCRRequest{
-		ImageData: []byte(imageData),
-		Lang:      lang,
-	})
+func (s *OCRService) ProcessImage(ctx context.Context, img []byte, lang string) ([]string, error) {
+	text, err := s.Client.ProcessImage(ctx, img, lang)
 	if err != nil {
 		return nil, err
 	}
 
-	return resp.Text, nil
+	return text, nil
 }

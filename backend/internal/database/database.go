@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// миграцию в файле
 func DbConnect() (*gorm.DB, error) {
 	host := os.Getenv("DB_HOST")
 	user := os.Getenv("DB_USER")

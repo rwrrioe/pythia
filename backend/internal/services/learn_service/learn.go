@@ -15,7 +15,7 @@ func NewLearnService(optcount int) *LearnService {
 	return &LearnService{Optcount: optcount}
 }
 
-func (s *LearnService) QuizTest(ctx context.Context, words *[]entities.UnknownWord) *[]entities.QuizQuestion {
+func (s *LearnService) QuizTest(ctx context.Context, words *[]entities.UnknownWord) []entities.QuizQuestion {
 	var test []entities.QuizQuestion
 
 	for _, v := range *words {
@@ -28,7 +28,7 @@ func (s *LearnService) QuizTest(ctx context.Context, words *[]entities.UnknownWo
 		test = append(test, questionDTO)
 	}
 
-	return &test
+	return test
 
 }
 

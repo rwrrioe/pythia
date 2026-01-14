@@ -1,5 +1,6 @@
 package domain
 
+//интерфейсы поближе к коду лучше
 import (
 	"context"
 

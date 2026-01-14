@@ -1,4 +1,4 @@
-package taskstorage
+package redis_storage
 
 import (
 	"context"
@@ -15,10 +15,10 @@ type RedisTaskStorage struct {
 }
 
 type TaskDTO struct {
-	OCRText    *[]string                `json:"ocr_text"`
-	Words      *[]entities.UnknownWord  `json:"words"`
-	Examples   *[]entities.Example      `json:"examples"`
-	FlashCards *[]entities.FlashCardDTO `json:"flashcards"`
+	OCRText    []string                `json:"ocr_text"`
+	Words      []entities.UnknownWord  `json:"words"`
+	Examples   []entities.Example      `json:"examples"`
+	FlashCards []entities.FlashCardDTO `json:"flashcards"`
 }
 
 func NewRedisTaskStorage(add string, ttl time.Duration) *RedisTaskStorage {
@@ -70,7 +70,7 @@ func (s *RedisTaskStorage) UpdateTask(ctx context.Context, taskID string, update
 
 	var task TaskDTO
 	if err := json.Unmarshal([]byte(val), &task); err != nil {
-		return false, err
+		return true, err
 	}
 
 	update(&task)
@@ -78,10 +78,12 @@ func (s *RedisTaskStorage) UpdateTask(ctx context.Context, taskID string, update
 	if err != nil {
 		return true, err
 	}
+
 	err = s.client.WithContext(ctx).Set("task:"+taskID, b, time.Hour).Err()
 	if err != nil {
 		return true, err
 	}
+
 	return true, nil
 }
 
