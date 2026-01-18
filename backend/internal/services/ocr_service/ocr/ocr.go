@@ -1,4 +1,4 @@
-package ocr
+package service
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package cards
+package service
 
 import (
 	"context"
