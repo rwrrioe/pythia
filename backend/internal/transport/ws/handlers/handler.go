@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/rwrrioe/pythia/backend/internal/services/ocr_service/ocr"
 	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
 )
 
@@ -15,14 +14,12 @@ var upgrader = websocket.Upgrader{
 }
 
 type Handler struct {
-	ocr *ocr.OCRProcesser
-	ws  *hub.WebSocketHub
+	ws *hub.WebSocketHub
 }
 
-func NewHandler(ocr *ocr.OCRProcesser, ws *hub.WebSocketHub) *Handler {
+func NewHandler(ws *hub.WebSocketHub) *Handler {
 	return &Handler{
-		ocr: ocr,
-		ws:  ws,
+		ws: ws,
 	}
 }
 
