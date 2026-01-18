@@ -1,37 +1,36 @@
-package services
+package service
 
 import (
 	"context"
 
+	ocrclient "github.com/rwrrioe/pythia/backend/internal/clients/ocr/grpc"
 	cards "github.com/rwrrioe/pythia/backend/internal/services/cards_service"
 	learn "github.com/rwrrioe/pythia/backend/internal/services/learn_service"
-	"github.com/rwrrioe/pythia/backend/internal/services/ocr_service/ocr"
+	ocr "github.com/rwrrioe/pythia/backend/internal/services/ocr_service/ocr"
 	translate "github.com/rwrrioe/pythia/backend/internal/services/translate_service"
 )
 
 type Services struct {
-	Cards     *cards.FlashCardsService
-	OCR       *ocr.OCRProcesser
-	Translate *translate.TranslateService
-	Learn     *learn.LearnService
+	CardService   *cards.FlashCardsService
+	OcrService    *ocr.OCRService
+	TranslService *translate.TranslateService
+	LearnService  *learn.LearnService
 }
 
-func New(ctx context.Context, AImodel string, grpcadd string) (*Services, error) {
-	cards := cards.NewCardsService()
-	ocr, err := ocr.NewOCRProcessor(grpcadd)
-	if err != nil {
-		return nil, err
-	}
-	transl, err := translate.NewTranslateService(ctx, AImodel)
+func New(ctx context.Context, ocrClient *ocrclient.Client, aiModel string) (*Services, error) {
+	cardService := cards.NewCardsService()
+	ocrService := ocr.New(ocrClient)
+
+	translService, err := translate.NewTranslateService(ctx, aiModel)
 	if err != nil {
 		return nil, err
 	}
 
-	learn := learn.NewLearnService(4)
+	learnService := learn.NewLearnService(4)
 	return &Services{
-		Cards:     cards,
-		OCR:       ocr,
-		Translate: transl,
-		Learn:     learn,
+		CardService:   cardService,
+		OcrService:    ocrService,
+		TranslService: translService,
+		LearnService:  learnService,
 	}, nil
 }
