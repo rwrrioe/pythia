@@ -3,48 +3,81 @@ package redis_storage
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/redis/go-redis/v9"
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 )
 
-type RedisTaskStorage struct {
+type RedisStorage struct {
 	ttl    time.Duration
 	client *redis.Client
 }
 
+type SessionDTO struct {
+	Id        int           `json:"session_id"`
+	Name      string        `json:"name"`
+	StartedAt time.Time     `json:"started_at"`
+	EndedAt   time.Time     `json:"ended_at"`
+	Duration  time.Duration `json:"duration"`
+	Status    string        `json:"status"`
+	Language  int           `json:"language"`
+	Accuracy  float64       `json:"accuracy"`
+}
 type TaskDTO struct {
-	OCRText    []string                `json:"ocr_text"`
-	Words      []entities.UnknownWord  `json:"words"`
-	Examples   []entities.Example      `json:"examples"`
-	FlashCards []entities.FlashCardDTO `json:"flashcards"`
+	SessionId int             `json:"session_id"`
+	OCRText   []string        `json:"ocr_text"`
+	Words     []entities.Word `json:"words"`
 }
 
-func NewRedisTaskStorage(add string, ttl time.Duration) *RedisTaskStorage {
+func NewRedisStorage(ctx context.Context, add string, ttl time.Duration) *RedisStorage {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     add,
 		Password: "",
 		DB:       0,
 	})
 
-	return &RedisTaskStorage{
+	//creating index
+	_, err := rdb.FTCreate(
+		ctx,
+		"idx:tasks",
+		// Options:
+		&redis.FTCreateOptions{
+			OnJSON: true,
+			Prefix: []interface{}{"task:"},
+		},
+		// Index schema fields:
+		&redis.FieldSchema{
+			FieldName: "$.session_id",
+			As:        "sessionId",
+			FieldType: redis.SearchFieldTypeTag,
+		},
+	).Result()
+
+	if err != nil {
+		return nil
+	}
+	return &RedisStorage{
 		ttl:    ttl,
 		client: rdb,
 	}
 }
 
-func (s *RedisTaskStorage) Save(ctx context.Context, taskID string, task *TaskDTO) error {
-	b, err := json.Marshal(task)
-	if err != nil {
+func (s *RedisStorage) Save(ctx context.Context, taskId string, task TaskDTO) error {
+	key := fmt.Sprintf("task:%s", taskId)
+	if err := s.client.JSONSet(ctx, key, "$", task).Err(); err != nil {
 		return err
 	}
 
-	return s.client.WithContext(ctx).Set("task:"+taskID, b, s.ttl).Err()
+	_ = s.client.Expire(ctx, key, s.ttl).Err()
+	return nil
 }
 
-func (s *RedisTaskStorage) Get(ctx context.Context, taskID string) (*TaskDTO, bool, error) {
-	val, err := s.client.WithContext(ctx).Get("task:" + taskID).Result()
+func (s *RedisStorage) Get(ctx context.Context, taskId string) (*TaskDTO, bool, error) {
+	key := fmt.Sprintf("task:%s", taskId)
+
+	val, err := s.client.JSONGet(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, false, nil
@@ -59,8 +92,43 @@ func (s *RedisTaskStorage) Get(ctx context.Context, taskID string) (*TaskDTO, bo
 	return &task, true, nil
 }
 
-func (s *RedisTaskStorage) UpdateTask(ctx context.Context, taskID string, update func(task *TaskDTO)) (bool, error) {
-	val, err := s.client.WithContext(ctx).Get("task:" + taskID).Result()
+func (s *RedisStorage) GetBySession(ctx context.Context, sessionId int) ([]TaskDTO, bool, error) {
+	q := fmt.Sprintf("@sessionId:{%d}", sessionId)
+
+	res, err := s.client.FTSearchWithArgs(ctx, "idx:tasks", q, &redis.FTSearchOptions{
+		Return: []redis.FTSearchReturn{{FieldName: "$"}},
+	}).Result()
+
+	if err != nil {
+		return nil, false, err
+	}
+
+	if res.Total == 0 {
+		return nil, false, nil
+	}
+
+	tasks := make([]TaskDTO, 0, len(res.Docs))
+	for _, doc := range res.Docs {
+		raw, ok := doc.Fields["$"]
+		if !ok {
+			continue
+		}
+		var t TaskDTO
+
+		if err := json.Unmarshal([]byte(raw), &t); err != nil {
+			return nil, true, err
+		}
+
+		tasks = append(tasks, t)
+	}
+
+	return tasks, true, nil
+}
+
+func (s *RedisStorage) UpdateTask(ctx context.Context, sessionId int, taskId string, update func(task *TaskDTO)) (bool, error) {
+	key := fmt.Sprintf("task:%s", taskId)
+
+	val, err := s.client.JSONGet(ctx, key, "$").Result()
 	if err != nil {
 		if err == redis.Nil {
 			return false, nil
@@ -68,25 +136,85 @@ func (s *RedisTaskStorage) UpdateTask(ctx context.Context, taskID string, update
 		return false, err
 	}
 
-	var task TaskDTO
-	if err := json.Unmarshal([]byte(val), &task); err != nil {
+	var arr []TaskDTO
+	if err := json.Unmarshal([]byte(val), &arr); err != nil {
 		return true, err
 	}
+	task := arr[0]
 
 	update(&task)
-	b, err := json.Marshal(task)
+
+	err = s.client.JSONSet(ctx, key, "$", task).Err()
 	if err != nil {
 		return true, err
 	}
 
-	err = s.client.WithContext(ctx).Set("task:"+taskID, b, time.Hour).Err()
+	_ = s.client.Expire(ctx, key, s.ttl)
+	return true, nil
+}
+
+func (s *RedisStorage) Delete(ctx context.Context, taskID string) error {
+	return s.client.Del(ctx, "task:"+taskID).Err()
+}
+
+func (s *RedisStorage) SaveSession(ctx context.Context, ss SessionDTO) error {
+	key := fmt.Sprintf("session:%d", ss.Id)
+
+	b, err := json.Marshal(ss)
+	if err != nil {
+		return err
+	}
+	if err := s.client.Set(ctx, key, b, s.ttl).Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *RedisStorage) GetSession(ctx context.Context, ssId int) (*SessionDTO, bool, error) {
+	key := fmt.Sprintf("session:%d", ssId)
+
+	val, err := s.client.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, false, nil
+		}
+		return nil, true, err
+	}
+
+	var ss SessionDTO
+	if err := json.Unmarshal([]byte(val), &ss); err != nil {
+		return nil, true, err
+	}
+	return &ss, true, nil
+}
+
+func (s *RedisStorage) UpdateSession(ctx context.Context, ssId int, update func(s *SessionDTO)) (bool, error) {
+	key := fmt.Sprintf("session:%d", ssId)
+
+	val, err := s.client.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return false, nil
+		}
+		return false, err
+	}
+
+	var ss SessionDTO
+	if err := json.Unmarshal([]byte(val), &ss); err != nil {
+		return true, err
+	}
+
+	update(&ss)
+	b, err := json.Marshal(ss)
+	if err != nil {
+		return true, err
+	}
+
+	err = s.client.Set(ctx, key, b, s.ttl).Err()
 	if err != nil {
 		return true, err
 	}
 
 	return true, nil
-}
-
-func (s *RedisTaskStorage) Delete(ctx context.Context, taskID string) error {
-	return s.client.WithContext(ctx).Del("task:" + taskID).Err()
 }
