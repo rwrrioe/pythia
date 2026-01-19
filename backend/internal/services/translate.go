@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
-	"github.com/rwrrioe/pythia/backend/internal/domain/models"
+	"github.com/rwrrioe/pythia/backend/internal/domain/requests"
 	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
 	"google.golang.org/genai"
 )
@@ -41,11 +41,11 @@ const examplePrompt string = `
 Дай перевод на русский в формате JSON [{"word": "...", "example": "..."}].
 Текст: %s, слова %s`
 
-func (t *TranslateService) FindUnknownWords(ctx context.Context, task *taskstorage.TaskDTO, req models.AnalyzeRequest) ([]entities.UnknownWord, error) {
+func (t *TranslateService) FindUnknownWords(ctx context.Context, task *taskstorage.TaskDTO, req requests.AnalyzeRequest) ([]entities.Word, error) {
 	if task.OCRText == nil {
 		return nil, errors.New("empty text in request")
 	}
-	var words []entities.UnknownWord
+	var words []entities.Word
 
 	config := &genai.GenerateContentConfig{
 		ResponseMIMEType: "application/json",
@@ -85,7 +85,7 @@ func (t *TranslateService) FindUnknownWords(ctx context.Context, task *taskstora
 	return words, nil
 }
 
-func (t *TranslateService) WriteExamples(ctx context.Context, task *taskstorage.TaskDTO, req models.AnalyzeRequest) ([]entities.Example, error) {
+func (t *TranslateService) WriteExamples(ctx context.Context, task *taskstorage.TaskDTO, req requests.AnalyzeRequest) ([]entities.Example, error) {
 	if task.OCRText == nil {
 		return nil, errors.New("empty text in request")
 	}

@@ -10,7 +10,7 @@ type OCRService struct {
 	Client *ocrclient.Client
 }
 
-func New(cl *ocrclient.Client) *OCRService {
+func NewOCRService(cl *ocrclient.Client) *OCRService {
 	return &OCRService{Client: cl}
 }
 

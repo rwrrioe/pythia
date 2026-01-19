@@ -6,13 +6,22 @@ import (
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 )
 
+type FlashCardProvider interface {
+	List(ctx context.Context) ([]entities.FlashCard, error)
+	ListByDeck(ctx context.Context, deckId int) ([]entities.FlashCard, error)
+}
+
+type DeckProvider interface {
+	ListBySession(ctx context.Context, sessionId int) (*entities.Deck, error)
+}
+
 type FlashCardsService struct{}
 
 func NewCardsService() *FlashCardsService {
 	return &FlashCardsService{}
 }
 
-func (c *FlashCardsService) BuildCards(ctx context.Context, words []entities.UnknownWord) ([]entities.FlashCardDTO, error) {
+func (c *FlashCardsService) BuildCards(ctx context.Context, words []entities.Word) ([]entities.FlashCardDTO, error) {
 	dto := make([]entities.FlashCardDTO, len(words))
 	for k := range words {
 		dto[k].Translation = words[k].Translation
