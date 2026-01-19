@@ -1,6 +1,6 @@
 package entities
 
-type UnknownWord struct {
+type Word struct {
 	Word        string `json:"word"`
 	Translation string `json:"translation"`
 	Lang        string
