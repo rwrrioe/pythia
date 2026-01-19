@@ -4,7 +4,7 @@ type User struct {
 	Id          int    `db:"id"`
 	Email       string `db:"email"`
 	Name        string `db:"name"`
-	Level       int    `db:"level_id"`
-	Lang        int    `db:"lang_id"`
+	Level       string `db:"level"`
+	Lang        string `db:"language"`
 	WordsPerDay int    `db:"words_per_day"`
 }
