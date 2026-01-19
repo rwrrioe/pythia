@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rwrrioe/pythia/backend/internal/auth"
+	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	"github.com/rwrrioe/pythia/backend/internal/storage/models"
 )
 
@@ -20,7 +21,7 @@ func NewUserStorage(conn *pgx.Conn) (*UserStorage, error) {
 	return &UserStorage{conn: conn}, nil
 }
 
-func (s *UserStorage) GetUser(ctx context.Context) (*models.User, error) {
+func (s *UserStorage) GetUser(ctx context.Context) (*entities.User, error) {
 	const op = "postgresql.UserStorage.GetUser"
 
 	var user models.User
@@ -30,12 +31,23 @@ func (s *UserStorage) GetUser(ctx context.Context) (*models.User, error) {
 	}
 
 	if err := s.conn.QueryRow(ctx,
-		"SELECT * FROM users WHERE user_id=$1", userId).Scan(&user); err != nil {
+		`SELECT * 
+									FROM users u 
+									JOIN languages l ON u.lang_id = l.id
+									JOIN levels lv ON u.level_id = lv.id
+									WHERE u.user_id=$1
+									`, userId).Scan(&user); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrUserNotFound
 		}
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
 
-	return &user, nil
+	return &entities.User{
+		Email:       user.Email,
+		Name:        user.Name,
+		Level:       user.Level,
+		Lang:        user.Lang,
+		WordsPerDay: user.WordsPerDay,
+	}, nil
 }

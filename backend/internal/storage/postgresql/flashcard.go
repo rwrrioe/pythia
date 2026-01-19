@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rwrrioe/pythia/backend/internal/auth"
+	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	"github.com/rwrrioe/pythia/backend/internal/storage/models"
 )
 
@@ -14,13 +15,13 @@ type FlashCardStorage struct {
 	conn *pgx.Conn
 }
 
-func NewFlashcardRepo(conn *pgx.Conn) *FlashCardStorage {
+func NewFlashcardStorage(conn *pgx.Conn) *FlashCardStorage {
 	return &FlashCardStorage{
 		conn: conn,
 	}
 }
 
-func (s *FlashCardStorage) ListByDeck(ctx context.Context, deckId int) ([]models.FlashCard, error) {
+func (s *FlashCardStorage) ListByDeck(ctx context.Context, deckId int) ([]entities.FlashCard, error) {
 	const op = "Storage.FlashCardStorage.ListByDeck"
 
 	var flashcards []models.FlashCard
@@ -56,5 +57,66 @@ func (s *FlashCardStorage) ListByDeck(ctx context.Context, deckId int) ([]models
 	if rows.Err() != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
-	return flashcards, nil
+
+	var flcards []entities.FlashCard
+	for _, fl := range flashcards {
+		flcards = append(flcards, entities.FlashCard{
+			Id:     fl.Id,
+			Word:   fl.Word,
+			Transl: fl.Transl,
+			Desc:   fl.Desc,
+			Lang:   fl.Lang,
+		})
+	}
+
+	return flcards, nil
+}
+
+func (s *FlashCardStorage) List(ctx context.Context) ([]entities.FlashCard, error) {
+	const op = "Storage.FlashCardStorage.List"
+
+	var flashcards []models.FlashCard
+	uid, ok := auth.UIDFromContext(ctx)
+	if !ok {
+		return nil, ErrUserNotFound
+	}
+
+	rows, err := s.conn.Query(ctx, `SELECT *
+										FROM flashcards
+										WHERE user_id=$1
+										`, uid)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrDeckNotFound
+		}
+		return nil, fmt.Errorf("%s:%w", op, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var fc models.FlashCard
+
+		if err = rows.Scan(&fc); err != nil {
+			return nil, fmt.Errorf("%s:%w", op, err)
+		}
+
+		flashcards = append(flashcards, fc)
+	}
+
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("%s:%w", op, err)
+	}
+
+	var flcards []entities.FlashCard
+	for _, fl := range flashcards {
+		flcards = append(flcards, entities.FlashCard{
+			Id:     fl.Id,
+			Word:   fl.Word,
+			Transl: fl.Transl,
+			Desc:   fl.Desc,
+			Lang:   fl.Lang,
+		})
+	}
+
+	return flcards, nil
 }

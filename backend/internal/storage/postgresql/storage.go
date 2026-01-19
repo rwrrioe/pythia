@@ -10,10 +10,11 @@ import (
 )
 
 var (
-	ErrUserNotFound      = errors.New("user not found")
-	ErrFlashCardNotFound = errors.New("flashcard not found")
-	ErrDeckNotFound      = errors.New("deck not found")
-	ErrSessionNotFound   = errors.New("session not found")
+	ErrUserNotFound         = errors.New("user not found")
+	ErrFlashCardNotFound    = errors.New("flashcard not found")
+	ErrDeckNotFound         = errors.New("deck not found")
+	ErrSessionNotFound      = errors.New("session not found")
+	ErrSessionAlreadyExists = errors.New("session already exists")
 )
 
 func New(ctx context.Context) (*pgx.Conn, error) {

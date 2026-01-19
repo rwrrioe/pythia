@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rwrrioe/pythia/backend/internal/auth"
+	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	"github.com/rwrrioe/pythia/backend/internal/storage/models"
 )
 
@@ -20,7 +21,7 @@ func NewDeckStorage(conn *pgx.Conn) *DeckStorage {
 	}
 }
 
-func (s *DeckStorage) ListBySession(ctx context.Context, sessionId int) (*models.Deck, error) {
+func (s *DeckStorage) ListBySession(ctx context.Context, sessionId int) (*entities.Deck, error) {
 	const op = "Storage.DeckStorage.ListBySession"
 
 	var deck models.Deck
@@ -37,5 +38,8 @@ func (s *DeckStorage) ListBySession(ctx context.Context, sessionId int) (*models
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
 
-	return &deck, nil
+	return &entities.Deck{
+		Id:        deck.Id,
+		SessionId: deck.SessionId,
+	}, nil
 }
