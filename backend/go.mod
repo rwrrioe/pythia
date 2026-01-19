@@ -10,12 +10,15 @@ require (
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/gin-contrib/cors v1.7.6 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3 // indirect
 	github.com/redis/go-redis v6.15.9+incompatible // indirect
+	github.com/redis/go-redis/v9 v9.17.2 // indirect
 	github.com/rwrrioe/pythia_protos v0.0.0-20251104094248-499daad8867a // indirect
 	github.com/rwrrioe/sso v0.0.0-20260115163525-9b68a2d1aca8 // indirect
 	github.com/rwrrioe/sso_protos v0.0.0-20260115162349-67924d688049 // indirect
