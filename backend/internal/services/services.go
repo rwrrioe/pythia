@@ -15,7 +15,7 @@ type Services struct {
 
 func New(ctx context.Context, ocrClient *ocrclient.Client, aiModel string) (*Services, error) {
 	cardService := NewCardsService()
-	ocrService := New(ocrClient)
+	// ocrService := New(ocrClient)
 
 	translService, err := NewTranslateService(ctx, aiModel)
 	if err != nil {
@@ -24,8 +24,8 @@ func New(ctx context.Context, ocrClient *ocrclient.Client, aiModel string) (*Ser
 
 	learnService := NewLearnService(4)
 	return &Services{
-		CardService:   cardService,
-		OcrService:    ocrService,
+		CardService: cardService,
+		// OcrService:    ocrService,
 		TranslService: translService,
 		LearnService:  learnService,
 	}, nil

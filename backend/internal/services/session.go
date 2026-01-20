@@ -138,7 +138,7 @@ func (s *SessionService) FindWords(ctx context.Context, taskId string) error {
 		Lang:  langsMap[s.Session.Language],
 	})
 
-	if ok, err = s.Redis.UpdateTask(ctx, s.Session.Id, taskId, func(task *taskstorage.TaskDTO) {
+	if ok, err = s.Redis.UpdateTask(ctx, taskId, func(task *taskstorage.TaskDTO) {
 		task.Words = words
 	}); err != nil {
 		return fmt.Errorf("%s:%w", op, err)
@@ -147,6 +147,20 @@ func (s *SessionService) FindWords(ctx context.Context, taskId string) error {
 	}
 
 	return nil
+}
+
+func (s *SessionService) SummarizeSession(ctx context.Context, sessionId int) ([]entities.Word, error) {
+	const op = "service.SessionService.SummarizeSession"
+
+	words, err := s.Translate.SummarizeWords(ctx, sessionId, t, requests.AnalyzeRequest{
+		Level: levelsMap[s.Session.Level],
+		Lang:  langsMap[s.Session.Language],
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%s:%w", op, err)
+	}
+
+	return words, err
 }
 
 var levelsMap = map[int]string{
