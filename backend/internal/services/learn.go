@@ -15,10 +15,10 @@ func NewLearnService(optcount int) *LearnService {
 	return &LearnService{Optcount: optcount}
 }
 
-func (s *LearnService) QuizTest(ctx context.Context, words *[]entities.Word) []entities.QuizQuestion {
+func (s *LearnService) QuizTest(ctx context.Context, words []entities.Word) []entities.QuizQuestion {
 	var test []entities.QuizQuestion
 
-	for _, v := range *words {
+	for _, v := range words {
 		opts := pickOptions(words, v.Word, s.Optcount)
 		questionDTO := entities.QuizQuestion{
 			Answer:   v.Word,
@@ -32,10 +32,10 @@ func (s *LearnService) QuizTest(ctx context.Context, words *[]entities.Word) []e
 
 }
 
-func pickOptions(words *[]entities.Word, correct string, optcount int) []string {
+func pickOptions(words []entities.Word, correct string, optcount int) []string {
 	var pool []string
 
-	for _, w := range *words {
+	for _, w := range words {
 		if w.Word != correct {
 			pool = append(pool, w.Word)
 		}

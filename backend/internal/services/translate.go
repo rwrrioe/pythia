@@ -9,7 +9,6 @@ import (
 
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	"github.com/rwrrioe/pythia/backend/internal/domain/requests"
-	service "github.com/rwrrioe/pythia/backend/internal/services/errors"
 	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
 	"google.golang.org/genai"
 )
@@ -33,7 +32,7 @@ const findImportantPrompt string = `
 You are a language learning expert and vocabulary curator.
 
 You are given a list of words extracted from a single learning session.
-The learner is at CEFR level A2–B1.
+The learner is at CEFR level %s.
 
 Your task:
 1. Analyze all the words together as a single session context.
@@ -164,9 +163,8 @@ func (t *TranslateService) WriteExamples(ctx context.Context, task *taskstorage.
 	return examples, nil
 }
 
-func (s *TranslateService) SummarizeWords(ctx context.Context, sessionId int, req requests.AnalyzeRequest) ([]entities.Word, error) {
+func (s *TranslateService) SummarizeWords(ctx context.Context, words []entities.Word, req requests.AnalyzeRequest) ([]entities.Word, error) {
 	const op = "service.TranslateService.SummarizeWords"
-	var words []entities.Word
 
 	config := &genai.GenerateContentConfig{
 		ResponseMIMEType: "application/json",
@@ -183,26 +181,12 @@ func (s *TranslateService) SummarizeWords(ctx context.Context, sessionId int, re
 		},
 	}
 
-	tasks, ok, err := s.Redis.GetBySession(ctx, sessionId)
-	if err != nil {
-		return nil, fmt.Errorf("%s:%w", op, err)
-	} else if !ok {
-		return nil, fmt.Errorf("%s:%w", op, service.ErrSessionNotFound)
-	}
-
-	for _, t := range tasks {
-		ws := t.Words
-		for _, w := range ws {
-			words = append(words, w)
-		}
-	}
-
 	b, err := json.Marshal(words)
 	if err != nil {
 		return nil, err
 	}
 
-	prompt := fmt.Sprintf(findImportantPrompt, string(b))
+	prompt := fmt.Sprintf(findImportantPrompt, req.Level, string(b))
 	result, err := s.client.Models.GenerateContent(ctx,
 		s.model,
 		genai.Text(prompt),
