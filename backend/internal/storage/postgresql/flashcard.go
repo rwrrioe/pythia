@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/rwrrioe/pythia/backend/internal/auth"
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	"github.com/rwrrioe/pythia/backend/internal/storage/models"
@@ -119,4 +120,31 @@ func (s *FlashCardStorage) List(ctx context.Context) ([]entities.FlashCard, erro
 	}
 
 	return flcards, nil
+}
+
+func (s *FlashCardStorage) SaveFlashcard(ctx context.Context, flCard entities.FlashCard) error {
+	const op = "storage.FlashCardStorage.SaveFlashcard"
+
+	uid, ok := auth.UIDFromContext(ctx)
+	if !ok {
+		return ErrUserNotFound
+	}
+
+	sql := `
+		INSERT INTO flashcards (id, user_id, word, transl ,lang_id)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+
+	_, err := s.conn.Exec(ctx, sql, flCard.Id, uid, flCard.Word, flCard.Transl, flCard.Lang)
+	if err != nil {
+		var pgErr *pgconn.PgError
+
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return fmt.Errorf("%s:%w", op, ErrSessionAlreadyExists)
+		}
+
+		return fmt.Errorf("%s:%w", op, err)
+	}
+
+	return nil
 }
