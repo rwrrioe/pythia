@@ -11,5 +11,5 @@ type FlashCard struct {
 	Word   string
 	Transl string
 	Desc   string
-	Lang   string
+	Lang   int
 }
