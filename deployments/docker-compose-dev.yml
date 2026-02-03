@@ -1,15 +1,14 @@
 services:
   redis:
-    image: redis:8
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    image: redis/redis-stack-server:latest
     ports:
       - "6379:6379"
     volumes:
       - ./redis-data:/data
-      - ./redis-conf:/usr/local/etc/redis/redis.conf:ro
+      - ./redis-conf/redis.conf:/usr/local/etc/redis/redis.conf:ro
     environment:
       - TZ=UTC
-    restart : unless-stopped
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -25,16 +24,26 @@ services:
         - default
     container_name: pythia_backend
     depends_on:
-      - ocr
-      - db
-      - redis
+      pythia_db:
+          condition: service_healthy
+      sso_db:
+          condition: service_healthy
+      sso:
+        condition: service_healthy
+      ocr:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      - DATABASE_URL=postgres://postgres:1234@db:5432/pythiadb?sslmode=disable
+      - DB_USER=postgres
+      - DB_PASS=1234
+      - DB_HOST=pythia_db
+      - DB_PORT=5432
+      - DB_NAME=pythiadb
       - OCR_SERVICE_HOST=ocr
       - OCR_SERVICE_PORT=9080
-      - GIN_MODE=release
     env_file:
-      - .env
+      - ../backend/cmd/app/.env
     ports:
       - "8080:8080"
     networks:
@@ -60,23 +69,99 @@ services:
       - ../shared:/app/shared
     networks:
       - pythia_net
-  db:
+  sso:
+    build:
+      context: ../sso
+      dockerfile: Dockerfile
+      ssh:
+        - default
+    environment:
+      - GRPC_PORT=9081
+      - LOGGER_ENV=local
+      - DB_USER=postgres
+      - DB_PASS=1234
+      - DB_HOST=sso_db
+      - DB_PORT=5432
+      - DB_NAME=ssodb
+    env_file:
+      - ../backend/cmd/app/.env
+    container_name: pythia_sso
+    ports:
+      - "9081:9081"
+    networks:
+      - pythia_net
+  pythia_db:
     image: postgres:17-alpine
-    container_name: pythia_db_dev
-    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1234
       POSTGRES_DB: pythiadb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pythiadb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     ports:
       - "5432:5432"
     volumes:
-      - db_data_dev:/var/lib/postgresql/data
+      - pythia_db_data:/var/lib/postgresql/data
+    networks:
+      - pythia_net
+  sso_db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: ssodb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ssodb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "5433:5432"
+    volumes:
+      - sso_db_data:/var/lib/postgresql/data
     networks:
       - pythia_net
 
+
+  pythia_migrate:
+    image: migrate/migrate:4
+    depends_on:
+      pythia_db:
+        condition: service_healthy
+    volumes:
+      - ../backend/migrations:/migrations
+    command:
+      [
+        "-path", "/migrations",
+        "-database",
+        "postgres://postgres:1234@pythia_db:5432/pythiadb?sslmode=disable",
+        "up"
+      ]
+    networks:
+      - pythia_net
+
+  sso_migrate:
+    image: migrate/migrate:4
+    depends_on:
+      sso_db:
+        condition: service_healthy
+    volumes:
+      - ../sso/migrations:/migrations
+    command:
+       [
+        "-path", "/migrations",
+         "-database",
+        "postgres://postgres:1234@sso_db:5432/ssodb?sslmode=disable",
+         "up"
+      ]
+    networks:
+      - pythia_net
 networks:
   pythia_net:
     driver: bridge
 volumes:
-  db_data_dev:
+  pythia_db_data:
+  sso_db_data:
