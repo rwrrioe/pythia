@@ -1,4 +1,4 @@
-package auth
+package authn
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/rwrrioe/pythia/backend/internal/lib/jwt_parser"
 	"github.com/rwrrioe/pythia/backend/internal/lib/logger/sl"
 )
@@ -23,14 +24,14 @@ var (
 func New(
 	log *slog.Logger,
 	appSecret string,
-) func(next http.Handler) http.Handler {
+) func() gin.HandlerFunc {
 
 	//return middleware
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			tokenStr := extractBearerToken(r)
+	return func() gin.HandlerFunc {
+		return func(c *gin.Context) {
+			tokenStr := extractBearerToken(c.GetHeader("Authorization"))
 			if tokenStr == "" {
-				next.ServeHTTP(w, r)
+				c.Next()
 				return
 			}
 
@@ -39,37 +40,57 @@ func New(
 
 				log.Warn("failed to parse token", sl.Err(err))
 
-				ctx := context.WithValue(r.Context(), errorKey, ErrInvalidToken)
-				next.ServeHTTP(w, r.WithContext(ctx))
-
+				ctx := context.WithValue(c.Request.Context(), errorKey, err)
+				c.Request = c.Request.WithContext(ctx)
+				c.Next()
 				return
 			}
 
 			log.Info("user authorized", slog.Any("claims", claims))
 
-			ctx := context.WithValue(r.Context(), uidKey, claims.UserId)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
+			ctx := context.WithValue(c.Request.Context(), uidKey, claims.UserId)
+			c.Request = c.Request.WithContext(ctx)
+			c.Next()
+		}
 	}
 }
 
-func extractBearerToken(r *http.Request) string {
-	authHeader := r.Header.Get("Authorization")
+func extractBearerToken(authHeader string) string {
 	splitToken := strings.Split(authHeader, "Bearer")
 
 	if len(splitToken) != 2 {
 		return ""
 	}
 
-	return splitToken[1]
+	return strings.TrimSpace(splitToken[1])
 }
 
 func UIDFromContext(ctx context.Context) (int64, bool) {
 	uid, ok := ctx.Value(uidKey).(int64)
 	return uid, ok
+
 }
 
 func ErrorFromContext(ctx context.Context) (error, bool) {
 	err, ok := ctx.Value(errorKey).(error)
 	return err, ok
+}
+
+func NewRequireAuth(
+	log *slog.Logger,
+) func() gin.HandlerFunc {
+
+	return func() gin.HandlerFunc {
+		return func(c *gin.Context) {
+			if _, ok := UIDFromContext(c.Request.Context()); !ok {
+				log.Warn("user is unauthorized")
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "unauthorized",
+				})
+				return
+			}
+			log.Info("user is authorized")
+			c.Next()
+		}
+	}
 }
