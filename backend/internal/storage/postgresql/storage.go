@@ -7,19 +7,30 @@ import (
 	"os"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
-	ErrUserNotFound           = errors.New("user not found")
-	ErrFlashcardNotFound      = errors.New("flashcard not found")
-	ErrDeckNotFound           = errors.New("deck not found")
-	ErrSessionNotFound        = errors.New("session not found")
-	ErrSessionAlreadyExists   = errors.New("session already exists")
-	ErrDeckAlreadyExists      = errors.New("deck already exists")
-	ErrFlashcardAlreadyExists = errors.New("flashcard already exists")
+	ErrUserNotFound               = errors.New("user not found")
+	ErrFlashcardNotFound          = errors.New("flashcard not found")
+	ErrDeckNotFound               = errors.New("deck not found")
+	ErrSessionNotFound            = errors.New("session not found")
+	ErrSessionAlreadyExists       = errors.New("session already exists")
+	ErrSessionAlreadyFinished     = errors.New("session already finished")
+	ErrNoSessions                 = errors.New("no sessions")
+	ErrDeckAlreadyExists          = errors.New("deck already exists")
+	ErrFlashcardAlreadyExists     = errors.New("flashcard already exists")
+	ErrDeckFlashcardAlreadyExists = errors.New("deck-flashcards already exists")
 )
 
-func New(ctx context.Context) (*pgx.Conn, error) {
+type Querier interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+func New(ctx context.Context) (*pgxpool.Pool, error) {
 	const op = "storage.postgres.New"
 
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
@@ -28,10 +39,10 @@ func New(ctx context.Context) (*pgx.Conn, error) {
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
 		os.Getenv("DB_NAME"))
-	conn, err := pgx.Connect(ctx, connStr)
+	pool, err := pgxpool.New(ctx, connStr)
 	if err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
 
-	return conn, nil
+	return pool, nil
 }
