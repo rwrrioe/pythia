@@ -203,5 +203,8 @@ func (s *TranslateService) SummarizeWords(ctx context.Context, words []entities.
 		return nil, fmt.Errorf("failed to unmarshal AI examples-response: %w", err)
 	}
 
+	for i := range found {
+		found[i].Lang = req.Lang
+	}
 	return found, nil
 }
