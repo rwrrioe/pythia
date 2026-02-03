@@ -1,6 +1,7 @@
 package models
 
 type Deck struct {
-	Id        int `db:"id"`
-	SessionId int `db:"session_id"`
+	UserId    int   `db:"user_id"`
+	Id        int   `db:"id"`
+	SessionId int64 `db:"session_id"`
 }

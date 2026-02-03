@@ -3,7 +3,8 @@ package models
 import "time"
 
 type Session struct {
-	Id        int       `db:"id"`
+	Id        int64     `db:"id"`
+	UserId    int64     `db:"user_id"`
 	Name      string    `db:"name"`
 	Lang      int       `db:"lang_id"`
 	Status    string    `db:"status"`
