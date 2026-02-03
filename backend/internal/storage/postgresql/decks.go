@@ -7,32 +7,31 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/rwrrioe/pythia/backend/internal/auth"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	"github.com/rwrrioe/pythia/backend/internal/storage/models"
 )
 
 type DeckStorage struct {
-	conn *pgx.Conn
+	pool *pgxpool.Pool
 }
 
-func NewDeckStorage(conn *pgx.Conn) *DeckStorage {
-	return &DeckStorage{
-		conn: conn,
-	}
+func NewDeckStorage(pool *pgxpool.Pool) *DeckStorage {
+	return &DeckStorage{pool: pool}
 }
 
-func (s *DeckStorage) ListBySession(ctx context.Context, sessionId int) (*entities.Deck, error) {
-	const op = "Storage.DeckStorage.ListBySession"
+func (s *DeckStorage) ListBySession(ctx context.Context, q Querier, sessionId int64, uid int64) (*entities.Deck, error) {
+	const op = "postgresql.DeckStorage.ListBySession"
 
-	var deck models.Deck
-
-	uid, ok := auth.UIDFromContext(ctx)
-	if !ok {
-		return nil, ErrUserNotFound
-	}
-
-	if err := s.conn.QueryRow(ctx, "SELECT * FROM decks WHERE user_id=$1 AND session_id=$2", uid, sessionId).Scan(&deck); err != nil {
+	var d models.Deck
+	err := q.QueryRow(ctx,
+		`SELECT id, user_id, session_id
+         FROM decks
+         WHERE user_id=$1 AND session_id=$2`,
+		uid, int(sessionId),
+	).Scan(&d.Id, &d.UserId, &d.SessionId)
+	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrDeckNotFound
 		}
@@ -40,51 +39,46 @@ func (s *DeckStorage) ListBySession(ctx context.Context, sessionId int) (*entiti
 	}
 
 	return &entities.Deck{
-		Id:        deck.Id,
-		SessionId: deck.SessionId,
+		Id:        d.Id,
+		SessionId: d.SessionId,
 	}, nil
 }
 
-func (s *DeckStorage) SaveDeck(ctx context.Context, deck entities.Deck) error {
-	const op = "storage.DeckStorage.SaveDeck"
+func (s *DeckStorage) GetOrCreate(ctx context.Context, q Querier, sessionId, uid int64) (int, error) {
+	const op = "postgresql.DeckStorage.GetOrCreate"
 
-	uid, ok := auth.UIDFromContext(ctx)
-	if !ok {
-		return ErrUserNotFound
-	}
+	var id int
 
-	sql := `
-		INSERT INTO decks (id, user_id, session_id)
-		VALUES ($1, $2, $3)
-	`
-	_, err := s.conn.Exec(ctx, sql, deck.Id, uid, deck.SessionId)
+	err := q.QueryRow(ctx,
+		`INSERT INTO decks (user_id, session_id)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id, session_id) DO UPDATE SET session_id=EXCLUDED.session_id
+        RETURNING id
+         `,
+		uid, sessionId,
+	).Scan(&id)
 	if err != nil {
-		var pgErr *pgconn.PgError
-
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return fmt.Errorf("%s:%w", op, ErrDeckAlreadyExists)
-		}
-
-		return fmt.Errorf("%s:%w", op, err)
+		return 0, fmt.Errorf("%s:%w", op, err)
 	}
-	return nil
+	return id, nil
 }
 
-func (s *DeckStorage) AttachFlashcard(ctx context.Context, deckId int, flId int) error {
-	const op = "storage.DeckStorage.AttachFlashcard"
+func (s *DeckStorage) AttachFlashcard(ctx context.Context, q Querier, deckId int, flId int) error {
+	const op = "postgresql.DeckStorage.AttachFlashcard"
 
-	sql := `
-		INSERT INTO decks_flashcards (deck_id, flashcard_id)
-		VALUES ($1, $2)
-	`
-	_, err := s.conn.Exec(ctx, sql, deckId, flId)
+	_, err := q.Exec(ctx,
+		`INSERT INTO decks_flashcards (deck_id, flashcard_id)
+         VALUES ($1, $2)
+         ON CONFLICT (deck_id, flashcard_id ) DO NOTHING;
+         `,
+		deckId, flId,
+	)
 	if err != nil {
 		var pgErr *pgconn.PgError
-
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return fmt.Errorf("%s:%w", op, "deck-flashcard relation already exists")
+			// дубликат
+			return fmt.Errorf("%s:%w", op, ErrDeckFlashcardAlreadyExists)
 		}
-
 		return fmt.Errorf("%s:%w", op, err)
 	}
 	return nil

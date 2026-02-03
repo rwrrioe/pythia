@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/rwrrioe/pythia/backend/internal/auth"
+	"github.com/rwrrioe/pythia/backend/internal/auth/authn"
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	"github.com/rwrrioe/pythia/backend/internal/storage/models"
 )
@@ -25,7 +25,7 @@ func (s *UserStorage) GetUser(ctx context.Context) (*entities.User, error) {
 	const op = "postgresql.UserStorage.GetUser"
 
 	var user models.User
-	userId, ok := auth.UIDFromContext(ctx)
+	userId, ok := authn.UIDFromContext(ctx)
 	if !ok {
 		return nil, ErrUserNotFound
 	}

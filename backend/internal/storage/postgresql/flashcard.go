@@ -2,149 +2,126 @@ package postgresql
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/rwrrioe/pythia/backend/internal/auth"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	"github.com/rwrrioe/pythia/backend/internal/storage/models"
 )
 
 type FlashCardStorage struct {
-	conn *pgx.Conn
+	pool *pgxpool.Pool
 }
 
-func NewFlashcardStorage(conn *pgx.Conn) *FlashCardStorage {
-	return &FlashCardStorage{
-		conn: conn,
-	}
+func NewFlashcardStorage(pool *pgxpool.Pool) *FlashCardStorage {
+	return &FlashCardStorage{pool: pool}
 }
 
-func (s *FlashCardStorage) ListByDeck(ctx context.Context, deckId int) ([]entities.FlashCard, error) {
-	const op = "Storage.FlashCardStorage.ListByDeck"
+func scanFlashcard(row pgx.Row, m *models.FlashCard) error {
+	return row.Scan(
+		&m.Id,
+		&m.Word,
+		&m.Transl,
+		&m.Lang,
+	)
+}
 
-	var flashcards []models.FlashCard
-	uid, ok := auth.UIDFromContext(ctx)
-	if !ok {
-		return nil, ErrUserNotFound
-	}
+// flashcards конкретной деки
+func (s *FlashCardStorage) ListByDeck(ctx context.Context, q Querier, deckId int, uid int64) ([]entities.FlashCard, error) {
+	const op = "postgresql.FlashCardStorage.ListByDeck"
 
-	rows, err := s.conn.Query(ctx, `SELECT f.id, f.word, f.trans, f.description, l.language 
-										FROM decks_flashcards df 
-										JOIN flashcards f ON df.flashcard_id = f.id
-										JOIN languages l ON f.lang_id = l.id
-										WHERE f.user_id = $1 AND df.deck_id = $2
-										`, uid, deckId)
+	rows, err := q.Query(ctx,
+		`SELECT f.id, f.word, f.transl, f.lang_id
+         FROM decks_flashcards df flashcards
+         JOIN flashcards f ON df.flashcard_id = f.id
+         WHERE f.user_id=$1 AND df.deck_id=$2
+         ORDER BY f.id`,
+		uid, deckId,
+	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrDeckNotFound
-		}
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
 	defer rows.Close()
 
-	for rows.Next() {
-		var fc models.FlashCard
+	out := make([]entities.FlashCard, 0, 16)
 
-		if err = rows.Scan(&fc); err != nil {
+	for rows.Next() {
+		var m models.FlashCard
+		if err := scanFlashcard(rows, &m); err != nil {
 			return nil, fmt.Errorf("%s:%w", op, err)
 		}
 
-		flashcards = append(flashcards, fc)
-	}
-
-	if rows.Err() != nil {
-		return nil, fmt.Errorf("%s:%w", op, err)
-	}
-
-	var flcards []entities.FlashCard
-	for _, fl := range flashcards {
-		flcards = append(flcards, entities.FlashCard{
-			Id:     fl.Id,
-			Word:   fl.Word,
-			Transl: fl.Transl,
-			Desc:   fl.Desc,
-			Lang:   fl.Lang,
+		out = append(out, entities.FlashCard{
+			Id:     m.Id,
+			Word:   m.Word,
+			Transl: m.Transl,
+			Lang:   m.Lang, // или мапь в строку, если entities ожидает другое
+			Desc:   "",     // description нет в БД
 		})
 	}
 
-	return flcards, nil
-}
-
-func (s *FlashCardStorage) List(ctx context.Context) ([]entities.FlashCard, error) {
-	const op = "Storage.FlashCardStorage.List"
-
-	var flashcards []models.FlashCard
-	uid, ok := auth.UIDFromContext(ctx)
-	if !ok {
-		return nil, ErrUserNotFound
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s:%w", op, err)
 	}
 
-	rows, err := s.conn.Query(ctx, `SELECT *
-										FROM flashcards
-										WHERE user_id=$1
-										`, uid)
+	return out, nil
+}
+
+// flashcards пользователя
+func (s *FlashCardStorage) List(ctx context.Context, q Querier, uid int64) ([]entities.FlashCard, error) {
+	const op = "postgresql.FlashCardStorage.List"
+
+	rows, err := q.Query(ctx,
+		`SELECT id, word, transl, lang_id
+         FROM flashcards
+         WHERE user_id=$1
+         ORDER BY id DESC`,
+		uid,
+	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrDeckNotFound
-		}
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
 	defer rows.Close()
 
-	for rows.Next() {
-		var fc models.FlashCard
+	out := make([]entities.FlashCard, 0, 64)
 
-		if err = rows.Scan(&fc); err != nil {
+	for rows.Next() {
+		var m models.FlashCard
+
+		if err := scanFlashcard(rows, &m); err != nil {
 			return nil, fmt.Errorf("%s:%w", op, err)
 		}
 
-		flashcards = append(flashcards, fc)
-	}
-
-	if rows.Err() != nil {
-		return nil, fmt.Errorf("%s:%w", op, err)
-	}
-
-	var flcards []entities.FlashCard
-	for _, fl := range flashcards {
-		flcards = append(flcards, entities.FlashCard{
-			Id:     fl.Id,
-			Word:   fl.Word,
-			Transl: fl.Transl,
-			Desc:   fl.Desc,
-			Lang:   fl.Lang,
+		out = append(out, entities.FlashCard{
+			Id:     m.Id,
+			Word:   m.Word,
+			Transl: m.Transl,
+			Lang:   m.Lang,
+			Desc:   "",
 		})
 	}
 
-	return flcards, nil
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s:%w", op, err)
+	}
+
+	return out, nil
 }
 
-func (s *FlashCardStorage) SaveFlashcard(ctx context.Context, flCard entities.FlashCard) error {
-	const op = "storage.FlashCardStorage.SaveFlashcard"
+func (s *FlashCardStorage) GetOrCreate(ctx context.Context, q Querier, flCard entities.FlashCard, uid int64) (int, error) {
+	const op = "postgresql.FlashCardStorage.GetOrCreate"
 
-	uid, ok := auth.UIDFromContext(ctx)
-	if !ok {
-		return ErrUserNotFound
-	}
+	var id int
 
-	sql := `
-		INSERT INTO flashcards (id, user_id, word, transl ,lang_id)
-		VALUES ($1, $2, $3, $4, $5)
-	`
+	err := q.QueryRow(ctx, `
+		INSERT INTO flashcards (user_id, word, transl, lang_id)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (user_id, lang_id, word)
+		DO UPDATE SET transl = EXCLUDED.transl
+		RETURNING id
+	`, uid, flCard.Word, flCard.Transl, flCard.Lang).Scan(&id)
 
-	_, err := s.conn.Exec(ctx, sql, flCard.Id, uid, flCard.Word, flCard.Transl, flCard.Lang)
-	if err != nil {
-		var pgErr *pgconn.PgError
-
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return fmt.Errorf("%s:%w", op, ErrSessionAlreadyExists)
-		}
-
-		return fmt.Errorf("%s:%w", op, err)
-	}
-
-	return nil
+	return id, err
 }
