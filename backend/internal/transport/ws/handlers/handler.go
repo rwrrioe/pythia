@@ -3,6 +3,7 @@ package ws_handlers
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -24,10 +25,11 @@ func NewHandler(ws *hub.WebSocketHub) *Handler {
 }
 
 func (h *Handler) WebSocket(c *gin.Context) {
-	taskID := c.Query("task_id")
-	if taskID == "" {
+	sessionId, err := strconv.Atoi(c.Query("session_id"))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "missing task_id",
+			"error":   "invalid sessionId",
+			"details": err.Error(),
 		})
 		return
 	}
@@ -38,5 +40,5 @@ func (h *Handler) WebSocket(c *gin.Context) {
 		return
 	}
 
-	h.ws.AddClient(taskID, conn)
+	h.ws.Add(sessionId, conn)
 }
