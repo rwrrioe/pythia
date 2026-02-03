@@ -14,7 +14,6 @@ type Client struct {
 }
 
 func New(
-	ctx context.Context,
 	cc *grpc.ClientConn,
 	log *slog.Logger,
 ) *Client {
