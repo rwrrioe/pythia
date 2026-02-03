@@ -4,18 +4,19 @@ import (
 	"context"
 
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
+	"github.com/rwrrioe/pythia/backend/internal/storage/postgresql"
 )
 
 type FlashCardProvider interface {
-	List(ctx context.Context) ([]entities.FlashCard, error)
-	ListByDeck(ctx context.Context, deckId int) ([]entities.FlashCard, error)
-	SaveFlashcard(ctx context.Context, flCard entities.FlashCard) error
+	List(ctx context.Context, q postgresql.Querier, uid int64) ([]entities.FlashCard, error)
+	ListByDeck(ctx context.Context, q postgresql.Querier, deckId int, uid int64) ([]entities.FlashCard, error)
+	GetOrCreate(ctx context.Context, q postgresql.Querier, flCard entities.FlashCard, uid int64) (int, error)
 }
 
 type DeckProvider interface {
-	ListBySession(ctx context.Context, sessionId int) (*entities.Deck, error)
-	AttachFlashcard(ctx context.Context, deckId int, flId int) error
-	SaveDeck(ctx context.Context, deck entities.Deck) error
+	ListBySession(ctx context.Context, q postgresql.Querier, sessionId int64, uid int64) (*entities.Deck, error)
+	AttachFlashcard(ctx context.Context, q postgresql.Querier, deckId int, flId int) error
+	GetOrCreate(ctx context.Context, q postgresql.Querier, sessionId int64, uid int64) (int, error)
 }
 
 type FlashCardsService struct{}
