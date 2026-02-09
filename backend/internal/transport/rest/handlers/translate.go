@@ -11,7 +11,6 @@ import (
 	"github.com/rwrrioe/pythia/backend/internal/auth/authn"
 	"github.com/rwrrioe/pythia/backend/internal/domain/requests"
 	service "github.com/rwrrioe/pythia/backend/internal/services"
-	service_errors "github.com/rwrrioe/pythia/backend/internal/services/errors"
 	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
 	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
 )
@@ -68,7 +67,7 @@ func (h *TranslateHandler) Translate(c *gin.Context) {
 
 		words, err := h.session.FindWords(ctx, int64(sessionId), taskId)
 		if err != nil {
-			if errors.Is(err, service_errors.ErrSessionNotFound) {
+			if errors.Is(err, service.ErrSessionNotFound) {
 				h.ws.Notify(sessionId, gin.H{
 					"session_id": sessionId,
 					"task_id":    taskId,
@@ -77,7 +76,7 @@ func (h *TranslateHandler) Translate(c *gin.Context) {
 				return
 			}
 
-			if errors.Is(err, service_errors.ErrTaskNotFound) {
+			if errors.Is(err, service.ErrTaskNotFound) {
 				h.ws.Notify(sessionId, gin.H{
 					"session_id": sessionId,
 					"task_id":    taskId,

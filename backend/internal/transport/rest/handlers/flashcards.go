@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	service "github.com/rwrrioe/pythia/backend/internal/services"
-	service_errors "github.com/rwrrioe/pythia/backend/internal/services/errors"
 	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
 	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
 )
@@ -40,7 +39,7 @@ func (h *FlashCardsHandler) FlashCards(c *gin.Context) {
 	ctx := c.Request.Context()
 	flCards, err := h.session.GetFlashcards(ctx, int64(sessionId))
 	if err != nil {
-		if errors.Is(err, service_errors.ErrSessionNotFound) {
+		if errors.Is(err, service.ErrSessionNotFound) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "session not found",
 			})

@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	service "github.com/rwrrioe/pythia/backend/internal/services"
-	service_errors "github.com/rwrrioe/pythia/backend/internal/services/errors"
 )
 
 type StatsHandler struct {
@@ -25,7 +24,7 @@ func (h *StatsHandler) Dashboard(c *gin.Context) {
 
 	dashboard, err := h.stats.Dashboard(ctx)
 	if err != nil {
-		if errors.Is(err, service_errors.ErrUnauthorized) {
+		if errors.Is(err, service.ErrUnauthorized) {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error":   "user is unauthorized",
 				"details": err.Error(),
