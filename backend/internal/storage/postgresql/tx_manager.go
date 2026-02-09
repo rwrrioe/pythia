@@ -16,8 +16,9 @@ func NewTxManager(pool *pgxpool.Pool) *TxManager {
 	return &TxManager{Pool: pool}
 }
 
-func (m *TxManager) WithTx(ctx context.Context, fn func(tg pgx.Tx) error) error {
+func (m *TxManager) WithTx(ctx context.Context, fn func(tg pgx.Tx) error) (err error) {
 	const op = "postgresql.TxManager.WithTx"
+
 	tx, err := m.Pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("%s:%w", op, err)
@@ -26,12 +27,16 @@ func (m *TxManager) WithTx(ctx context.Context, fn func(tg pgx.Tx) error) error 
 	defer func() {
 		if p := recover(); p != nil {
 			_ = tx.Rollback(ctx)
+			panic(p)
 		}
 		if err != nil {
 			_ = tx.Rollback(ctx)
+			return
 		}
 
-		err = tx.Commit(ctx)
+		if cErr := tx.Commit(ctx); cErr != nil {
+			err = fmt.Errorf("%s: commit: %w", op, cErr)
+		}
 	}()
 
 	return fn(tx)
