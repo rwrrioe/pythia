@@ -7,7 +7,6 @@ import (
 
 	"github.com/rwrrioe/pythia/backend/internal/auth/authn"
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
-	service "github.com/rwrrioe/pythia/backend/internal/services/errors"
 	"github.com/rwrrioe/pythia/backend/internal/storage/postgresql"
 )
 
@@ -37,13 +36,13 @@ func (s *StatsService) Dashboard(ctx context.Context) (*entities.Dashboard, erro
 
 	uid, ok := authn.UIDFromContext(ctx)
 	if !ok {
-		return nil, fmt.Errorf("%s:%w", op, service.ErrUnauthorized)
+		return nil, fmt.Errorf("%s:%w", op, ErrUnauthorized)
 	}
 
 	latestSessions, err := s.sessionProvider.ListLatest(ctx, s.txm.Pool, uid)
 	if err != nil {
 		if errors.Is(err, postgresql.ErrUserNotFound) {
-			return nil, fmt.Errorf("%s:%w", op, service.ErrUnauthorized)
+			return nil, fmt.Errorf("%s:%w", op, ErrUnauthorized)
 		}
 
 		return nil, fmt.Errorf("%s:%w", op, err)
@@ -57,7 +56,7 @@ func (s *StatsService) Dashboard(ctx context.Context) (*entities.Dashboard, erro
 	sessions, err := s.sessionProvider.ListSessions(ctx, s.txm.Pool, uid)
 	if err != nil {
 		if errors.Is(err, postgresql.ErrUserNotFound) {
-			return nil, fmt.Errorf("%s:%w", op, service.ErrUnauthorized)
+			return nil, fmt.Errorf("%s:%w", op, ErrUnauthorized)
 		}
 
 		return nil, fmt.Errorf("%s:%w", op, err)

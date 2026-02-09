@@ -1,9 +1,9 @@
-package service_errors
+package service
 
 import "errors"
 
 var (
-	ErrEmptyText              = errors.New("text is empty")
+	ErrDeckNotFound           = errors.New("deck not found")
 	ErrNoWords                = errors.New("no words")
 	ErrSessionNotFound        = errors.New("session not found")
 	ErrSessionAlreadyFinished = errors.New("session already finished")

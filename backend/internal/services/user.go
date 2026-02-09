@@ -6,7 +6,6 @@ import (
 
 	"github.com/rwrrioe/pythia/backend/internal/auth/authn"
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
-	service "github.com/rwrrioe/pythia/backend/internal/services/errors"
 	"github.com/rwrrioe/pythia/backend/internal/storage/postgresql"
 )
 
@@ -26,7 +25,7 @@ func (s *UserService) UserStats(ctx context.Context) (*entities.UserStats, error
 
 	uid, ok := authn.UIDFromContext(ctx)
 	if !ok {
-		return nil, service.ErrUnauthorized
+		return nil, ErrUnauthorized
 	}
 
 	usr, err := s.User.GetUser(ctx)

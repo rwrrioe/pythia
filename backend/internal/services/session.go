@@ -13,7 +13,6 @@ import (
 	"github.com/rwrrioe/pythia/backend/internal/auth/authz"
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	"github.com/rwrrioe/pythia/backend/internal/domain/requests"
-	service "github.com/rwrrioe/pythia/backend/internal/services/errors"
 	"github.com/rwrrioe/pythia/backend/internal/storage/postgresql"
 	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
 )
@@ -80,11 +79,10 @@ func (s *SessionService) StartSession(ctx context.Context, req requests.CreateSe
 
 	uid, ok := authn.UIDFromContext(ctx)
 	if !ok {
-		return 0, fmt.Errorf("%s:%w", op, service.ErrUnauthorized)
+		return 0, fmt.Errorf("%s:%w", op, ErrUnauthorized)
 	}
 
 	ssion := entities.Session{
-		UserId:    uid,
 		Duration:  time.Duration(req.Duration) * time.Second,
 		Status:    Active,
 		Language:  req.LangId,
@@ -98,7 +96,7 @@ func (s *SessionService) StartSession(ctx context.Context, req requests.CreateSe
 
 	if err := s.Redis.SaveSession(ctx, taskstorage.SessionDTO{
 		Id:        int64(sessionId),
-		UserId:    ssion.UserId,
+		UserId:    uid,
 		Name:      ssion.Name,
 		Status:    ssion.Status,
 		Language:  ssion.Language,
@@ -115,10 +113,10 @@ func (s *SessionService) RecognizeText(ctx context.Context, sessionId int64, tas
 
 	uid, ok := authn.UIDFromContext(ctx)
 	if !ok {
-		return fmt.Errorf("%s:%w", op, service.ErrUnauthorized)
+		return fmt.Errorf("%s:%w", op, ErrUnauthorized)
 	}
 	if err := s.authorizer.CanAccessSession(ctx, uid, sessionId); errors.Is(err, authz.ErrForbidden) {
-		return fmt.Errorf("%s:%w", op, service.ErrForbidden)
+		return fmt.Errorf("%s:%w", op, ErrForbidden)
 	}
 
 	txt, err := s.OCR.ProcessImage(ctx, data, lang)
@@ -141,15 +139,15 @@ func (s *SessionService) FindWords(ctx context.Context, sessionId int64, taskId 
 
 	uid, ok := authn.UIDFromContext(ctx)
 	if !ok {
-		return nil, fmt.Errorf("%s:%w", op, service.ErrUnauthorized)
+		return nil, fmt.Errorf("%s:%w", op, ErrUnauthorized)
 	}
 	if err := s.authorizer.CanAccessSession(ctx, uid, sessionId); errors.Is(err, authz.ErrForbidden) {
-		return nil, fmt.Errorf("%s:%w", op, service.ErrForbidden)
+		return nil, fmt.Errorf("%s:%w", op, ErrForbidden)
 	}
 
 	t, ok, err := s.Redis.Get(ctx, taskId)
 	if ok != true {
-		return nil, fmt.Errorf("%s:%s", op, service.ErrTaskNotFound)
+		return nil, fmt.Errorf("%s:%s", op, ErrTaskNotFound)
 	}
 
 	if err != nil {
@@ -158,15 +156,15 @@ func (s *SessionService) FindWords(ctx context.Context, sessionId int64, taskId 
 
 	ss, ok, err := s.Redis.GetSession(ctx, sessionId)
 	if ok != true {
-		return nil, fmt.Errorf("%s:%s", op, service.ErrSessionNotFound)
+		return nil, fmt.Errorf("%s:%s", op, ErrSessionNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
 
 	words, err := s.Translate.FindUnknownWords(ctx, t, requests.AnalyzeRequest{
-		Level: levelsMap[ss.Level],
-		Lang:  langsMap[ss.Language],
+		Level: LevelsMap[ss.Level],
+		Lang:  LangsMap[ss.Language],
 	})
 
 	if ok, err = s.Redis.UpdateTask(ctx, taskId, func(task *taskstorage.TaskDTO) {
@@ -174,7 +172,7 @@ func (s *SessionService) FindWords(ctx context.Context, sessionId int64, taskId 
 	}); err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
 	} else if ok != true {
-		return nil, fmt.Errorf("%s:%s", op, service.ErrTaskNotFound)
+		return nil, fmt.Errorf("%s:%s", op, ErrTaskNotFound)
 	}
 
 	return words, nil
@@ -185,10 +183,10 @@ func (s *SessionService) EndSession(ctx context.Context, sessionId int64) error 
 
 	uid, ok := authn.UIDFromContext(ctx)
 	if !ok {
-		return fmt.Errorf("%s:%w", op, service.ErrUnauthorized)
+		return fmt.Errorf("%s:%w", op, ErrUnauthorized)
 	}
 	if err := s.authorizer.CanAccessSession(ctx, uid, sessionId); errors.Is(err, authz.ErrForbidden) {
-		return fmt.Errorf("%s:%w", op, service.ErrForbidden)
+		return fmt.Errorf("%s:%w", op, ErrForbidden)
 	}
 
 	//find the most important words read redis + call translate
@@ -197,19 +195,19 @@ func (s *SessionService) EndSession(ctx context.Context, sessionId int64) error 
 		return fmt.Errorf("%s:%w", op, err)
 	}
 	if ok != true {
-		return fmt.Errorf("%s:%s", op, service.ErrSessionNotFound)
+		return fmt.Errorf("%s:%s", op, ErrSessionNotFound)
 	}
 
 	tasks, ok, err := s.Redis.GetBySession(ctx, sessionId)
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			return fmt.Errorf("%s:%w", op, service.ErrNoWords)
+			return fmt.Errorf("%s:%w", op, ErrNoWords)
 		}
 
 		return fmt.Errorf("%s:%w", op, err)
 	}
 	if !ok {
-		return fmt.Errorf("%s:%w", op, service.ErrSessionNotFound)
+		return fmt.Errorf("%s:%w", op, ErrSessionNotFound)
 	}
 
 	var words []entities.Word
@@ -221,8 +219,8 @@ func (s *SessionService) EndSession(ctx context.Context, sessionId int64) error 
 	}
 
 	impWords, err := s.Translate.SummarizeWords(ctx, words, requests.AnalyzeRequest{
-		Level: levelsMap[ss.Level],
-		Lang:  langsMap[ss.Language],
+		Level: LevelsMap[ss.Level],
+		Lang:  LangsMap[ss.Language],
 	})
 	if err != nil {
 		return fmt.Errorf("%s:%w", op, err)
@@ -249,7 +247,7 @@ func (s *SessionService) EndSession(ctx context.Context, sessionId int64) error 
 			flId, err := s.FlashCardsProvider.GetOrCreate(ctx, tx, entities.FlashCard{
 				Word:   w.Word,
 				Transl: w.Translation,
-				Lang:   extractLangId(w.Lang),
+				Lang:   ExtractLang(w.Lang),
 			}, uid)
 
 			if err != nil {
@@ -282,15 +280,15 @@ func (s *SessionService) GetFlashcards(ctx context.Context, sessionId int64) ([]
 
 	uid, ok := authn.UIDFromContext(ctx)
 	if !ok {
-		return nil, fmt.Errorf("%s:%w", op, service.ErrUnauthorized)
+		return nil, fmt.Errorf("%s:%w", op, ErrUnauthorized)
 	}
 	if err := s.authorizer.CanAccessSession(ctx, uid, sessionId); errors.Is(err, authz.ErrForbidden) {
-		return nil, fmt.Errorf("%s:%w", op, service.ErrForbidden)
+		return nil, fmt.Errorf("%s:%w", op, ErrForbidden)
 	}
 
 	ss, ok, err := s.Redis.GetSession(ctx, sessionId)
 	if ok != true {
-		return nil, fmt.Errorf("%s:%s", op, service.ErrSessionNotFound)
+		return nil, fmt.Errorf("%s:%s", op, ErrSessionNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
@@ -305,15 +303,15 @@ func (s *SessionService) Quiz(ctx context.Context, sessionId int64) ([]entities.
 
 	uid, ok := authn.UIDFromContext(ctx)
 	if !ok {
-		return nil, fmt.Errorf("%s:%w", op, service.ErrUnauthorized)
+		return nil, fmt.Errorf("%s:%w", op, ErrUnauthorized)
 	}
 	if err := s.authorizer.CanAccessSession(ctx, uid, sessionId); errors.Is(err, authz.ErrForbidden) {
-		return nil, fmt.Errorf("%s:%w", op, service.ErrForbidden)
+		return nil, fmt.Errorf("%s:%w", op, ErrForbidden)
 	}
 
 	ss, ok, err := s.Redis.GetSession(ctx, sessionId)
 	if ok != true {
-		return nil, fmt.Errorf("%s:%s", op, service.ErrSessionNotFound)
+		return nil, fmt.Errorf("%s:%s", op, ErrSessionNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
@@ -328,10 +326,10 @@ func (s *SessionService) SummarizeSession(ctx context.Context, sessionId int64, 
 
 	uid, ok := authn.UIDFromContext(ctx)
 	if !ok {
-		return nil, fmt.Errorf("%s:%w", op, service.ErrUnauthorized)
+		return nil, fmt.Errorf("%s:%w", op, ErrUnauthorized)
 	}
 	if err := s.authorizer.CanAccessSession(ctx, uid, sessionId); errors.Is(err, authz.ErrForbidden) {
-		return nil, fmt.Errorf("%s:%w", op, service.ErrForbidden)
+		return nil, fmt.Errorf("%s:%w", op, ErrForbidden)
 	}
 
 	if err := s.SessionProvider.UpdateAccuracy(ctx, s.txm.Pool, sessionId, uid, accuracy); err != nil {
@@ -343,27 +341,53 @@ func (s *SessionService) SummarizeSession(ctx context.Context, sessionId int64, 
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
 	if ok != true {
-		return nil, fmt.Errorf("%s:%s", op, service.ErrSessionNotFound)
+		return nil, fmt.Errorf("%s:%s", op, ErrSessionNotFound)
 	}
 
 	return ss.Words, nil
 }
 
-var levelsMap = map[int]string{
+// sessions in library
+
+func (s *SessionService) GetSession(ctx context.Context, sessionId int64) (*entities.Session, error) {
+	const op = "services.SessionService.GetSession"
+
+	uid, ok := authn.UIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("%s:%w", op, ErrUnauthorized)
+	}
+
+	if err := s.authorizer.CanAccessSession(ctx, uid, sessionId); err != nil {
+		return nil, fmt.Errorf("%s:%w", op, ErrForbidden)
+	}
+
+	pool := postgresql.NewPoolQuerier(s.txm.Pool)
+	session, err := s.SessionProvider.GetSession(ctx, pool, sessionId, uid)
+	if err != nil {
+		if errors.Is(err, postgresql.ErrSessionNotFound) {
+			return nil, fmt.Errorf("%s:%w", op, ErrSessionNotFound)
+		}
+	}
+
+	return session, nil
+}
+
+var LevelsMap = map[int]string{
 	1: "A2",
 	2: "B1",
 	3: "B2",
 }
 
-var langsMap = map[int]string{
+var LangsMap = map[int]string{
 	1: "de",
 	2: "en",
 	3: "fr",
 	4: "es",
 }
 
-func extractLangId(lang string) int {
-	for k, v := range langsMap {
+// todo!! чето сделать с мапперами
+func ExtractLang(lang string) int {
+	for k, v := range LangsMap {
 		if v == lang {
 			return k
 		}
