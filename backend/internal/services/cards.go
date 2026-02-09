@@ -2,7 +2,12 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"log/slog"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rwrrioe/pythia/backend/internal/auth/authn"
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	"github.com/rwrrioe/pythia/backend/internal/storage/postgresql"
 )
@@ -11,21 +16,33 @@ type FlashCardProvider interface {
 	List(ctx context.Context, q postgresql.Querier, uid int64) ([]entities.FlashCard, error)
 	ListByDeck(ctx context.Context, q postgresql.Querier, deckId int, uid int64) ([]entities.FlashCard, error)
 	GetOrCreate(ctx context.Context, q postgresql.Querier, flCard entities.FlashCard, uid int64) (int, error)
+	FlashcardsPool() *pgxpool.Pool
 }
 
 type DeckProvider interface {
 	ListBySession(ctx context.Context, q postgresql.Querier, sessionId int64, uid int64) (*entities.Deck, error)
 	AttachFlashcard(ctx context.Context, q postgresql.Querier, deckId int, flId int) error
 	GetOrCreate(ctx context.Context, q postgresql.Querier, sessionId int64, uid int64) (int, error)
+	DeckPool() *pgxpool.Pool
 }
 
-type FlashCardsService struct{}
-
-func NewCardsService() *FlashCardsService {
-	return &FlashCardsService{}
+type FlashCardsService struct {
+	//TODO !!! костыли
+	flashcards FlashCardProvider
+	decks      DeckProvider
 }
 
-func (c *FlashCardsService) BuildCards(ctx context.Context, words []entities.Word) []entities.FlashCardDTO {
+func NewCardsService(
+	flashcards FlashCardProvider,
+	decks DeckProvider,
+) *FlashCardsService {
+	return &FlashCardsService{
+		flashcards: flashcards,
+		decks:      decks,
+	}
+}
+
+func (s *FlashCardsService) BuildCards(ctx context.Context, words []entities.Word) []entities.FlashCardDTO {
 	dto := make([]entities.FlashCardDTO, len(words))
 	for k := range words {
 		dto[k].Translation = words[k].Translation
@@ -34,4 +51,35 @@ func (c *FlashCardsService) BuildCards(ctx context.Context, words []entities.Wor
 	}
 
 	return dto
+}
+
+func (s *FlashCardsService) GetBySession(ctx context.Context, sessionId int64) ([]entities.FlashCard, error) {
+	const op = "service.FlashcardService.GetBySession"
+
+	uid, ok := authn.UIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("%s:%w", op, ErrUnauthorized)
+	}
+
+	//todo pool публичный -> костыль
+	q := postgresql.NewPoolQuerier(s.decks.DeckPool())
+	deck, err := s.decks.ListBySession(ctx, q, sessionId, uid)
+	if err != nil {
+		if errors.Is(err, postgresql.ErrDeckNotFound) {
+			return nil, fmt.Errorf("%s:%w", op, ErrDeckNotFound)
+		}
+
+		return nil, fmt.Errorf("%s:%w", op, err)
+	}
+	slog.Any(op, deck)
+
+	q = postgresql.NewPoolQuerier(s.flashcards.FlashcardsPool())
+	flCards, err := s.flashcards.ListByDeck(ctx, q, deck.Id, uid)
+	if err != nil {
+		return nil, fmt.Errorf("%s:%w", op, err)
+	}
+
+	slog.Any(op, flCards)
+
+	return flCards, nil
 }
