@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rwrrioe/pythia/backend/internal/domain/requests"
 	service "github.com/rwrrioe/pythia/backend/internal/services"
-	service_errors "github.com/rwrrioe/pythia/backend/internal/services/errors"
 	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
 	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
 )
@@ -72,7 +71,7 @@ func (h *SessionHandler) EndSession(c *gin.Context) {
 	ctx := c.Request.Context()
 	err = h.session.EndSession(ctx, int64(sessionId))
 
-	if err != nil && errors.Is(err, service_errors.ErrUnauthorized) {
+	if err != nil && errors.Is(err, service.ErrUnauthorized) {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":   "user is unauthorized",
 			"details": err.Error(),
@@ -80,7 +79,7 @@ func (h *SessionHandler) EndSession(c *gin.Context) {
 		return
 	}
 
-	if err != nil && errors.Is(err, service_errors.ErrForbidden) {
+	if err != nil && errors.Is(err, service.ErrForbidden) {
 		c.JSON(http.StatusForbidden, gin.H{
 			"error":   "access forbidden",
 			"details": err.Error(),
@@ -88,14 +87,14 @@ func (h *SessionHandler) EndSession(c *gin.Context) {
 		return
 	}
 
-	if err != nil && errors.Is(err, service_errors.ErrSessionAlreadyFinished) {
+	if err != nil && errors.Is(err, service.ErrSessionAlreadyFinished) {
 		c.JSON(http.StatusConflict, gin.H{
 			"error":   "session already finished",
 			"details": err.Error(),
 		})
 		return
 	}
-	if err != nil && errors.Is(err, service_errors.ErrSessionNotFound) {
+	if err != nil && errors.Is(err, service.ErrSessionNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error":   "session not found",
 			"details": err.Error(),
@@ -103,7 +102,7 @@ func (h *SessionHandler) EndSession(c *gin.Context) {
 		return
 	}
 
-	if err != nil && errors.Is(err, service_errors.ErrNoWords) {
+	if err != nil && errors.Is(err, service.ErrNoWords) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error":   "no words",
 			"details": err.Error(),
@@ -148,7 +147,7 @@ func (h *SessionHandler) SessionSummary(c *gin.Context) {
 
 	//summarize session
 	words, err := h.session.SummarizeSession(ctx, int64(sessionId), req.Accuracy)
-	if err != nil && errors.Is(err, service_errors.ErrUnauthorized) {
+	if err != nil && errors.Is(err, service.ErrUnauthorized) {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":   "user is unauthorized",
 			"details": err.Error(),
@@ -156,7 +155,7 @@ func (h *SessionHandler) SessionSummary(c *gin.Context) {
 		return
 	}
 
-	if err != nil && errors.Is(err, service_errors.ErrForbidden) {
+	if err != nil && errors.Is(err, service.ErrForbidden) {
 		c.JSON(http.StatusForbidden, gin.H{
 			"error":   "access forbidden",
 			"details": err.Error(),
@@ -164,7 +163,7 @@ func (h *SessionHandler) SessionSummary(c *gin.Context) {
 		return
 	}
 
-	if err != nil && errors.Is(err, service_errors.ErrSessionNotFound) {
+	if err != nil && errors.Is(err, service.ErrSessionNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error":   "session not found",
 			"details": err.Error(),
