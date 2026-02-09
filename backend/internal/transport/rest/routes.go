@@ -1,6 +1,8 @@
 package rest
 
 import (
+	"log/slog"
+
 	"github.com/gin-gonic/gin"
 	"github.com/rwrrioe/pythia/backend/internal/auth/authn"
 	"github.com/rwrrioe/pythia/backend/internal/services"
@@ -17,9 +19,18 @@ type Handlers struct {
 	sessionHandler    *rest_handlers.SessionHandler
 	flashcardsHandler *rest_handlers.FlashCardsHandler
 	statsHandler      *rest_handlers.StatsHandler
+	libraryHandler    *rest_handlers.LibraryHandler
 }
 
-func New(session *service.SessionService, stats *service.StatsService, sso authn.SSOService, ws *hub.WebSocketHub, storage *taskstorage.RedisStorage) *Handlers {
+func New(
+	log *slog.Logger,
+	session *service.SessionService,
+	library *service.LibraryService,
+	flashcards *service.FlashCardsService,
+	stats *service.StatsService,
+	sso authn.SSOService,
+	ws *hub.WebSocketHub,
+	storage *taskstorage.RedisStorage) *Handlers {
 
 	ocr := rest_handlers.NewOCRHandler(storage, ws, session)
 	transl := rest_handlers.NewTranslateHandler(storage, ws, session)
@@ -28,6 +39,7 @@ func New(session *service.SessionService, stats *service.StatsService, sso authn
 	ss := rest_handlers.NewSessionHandler(storage, ws, session)
 	authH := rest_handlers.NewAuthHandler(sso)
 	statsH := rest_handlers.NewStatsHandler(stats)
+	lib := rest_handlers.NewLibraryHandler(library, flashcards, log)
 
 	return &Handlers{
 		ocrHandler:        ocr,
@@ -37,17 +49,25 @@ func New(session *service.SessionService, stats *service.StatsService, sso authn
 		authHandler:       authH,
 		flashcardsHandler: flCards,
 		statsHandler:      statsH,
+		libraryHandler:    lib,
 	}
 }
 
-func RegisterRoutes(r *gin.Engine, handlers *Handlers, auth gin.HandlerFunc, requireAuth gin.HandlerFunc) {
+func RegisterRoutes(
+	r *gin.Engine,
+	handlers *Handlers,
+	auth gin.HandlerFunc,
+	requireAuth gin.HandlerFunc) {
+
 	api := r.Group("/api")
 	api.Use(auth)
 
-	protected := api.Group("")
-	protected.Use(requireAuth)
-	protected.GET("/dashboard", handlers.statsHandler.Dashboard)
+	//dashboard, stats
+	stats := api.Group("")
+	stats.Use(requireAuth)
+	stats.GET("/dashboard", handlers.statsHandler.Dashboard)
 
+	//sessions
 	session := api.Group("/session")
 	session.POST("/new", handlers.sessionHandler.NewSession)
 
@@ -60,6 +80,14 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, auth gin.HandlerFunc, req
 		sessionProtected.GET("/:sessionId/learn/flashcards", handlers.flashcardsHandler.FlashCards)
 		sessionProtected.GET("/:sessionId/learn/quiz", handlers.learnHandler.Quiz)
 		sessionProtected.POST("/:sessionId/summary", handlers.sessionHandler.SessionSummary)
+	}
+
+	//library
+	library := api.Group("/library")
+	library.Use(requireAuth)
+	{
+		library.GET("/session/:sessionId", handlers.libraryHandler.GetSession)
+		library.GET("/session", handlers.libraryHandler.ListSession)
 	}
 
 	public := r.Group("/api/auth")
