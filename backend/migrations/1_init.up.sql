@@ -1,4 +1,4 @@
-BEGIN
+BEGIN;
 
 CREATE TABLE IF NOT EXISTS languages (
     id INT PRIMARY KEY,
