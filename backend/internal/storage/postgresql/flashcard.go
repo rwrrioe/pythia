@@ -28,13 +28,17 @@ func scanFlashcard(row pgx.Row, m *models.FlashCard) error {
 	)
 }
 
+func (s *FlashCardStorage) FlashcardsPool() *pgxpool.Pool {
+	return s.pool
+}
+
 // flashcards конкретной деки
 func (s *FlashCardStorage) ListByDeck(ctx context.Context, q Querier, deckId int, uid int64) ([]entities.FlashCard, error) {
 	const op = "postgresql.FlashCardStorage.ListByDeck"
 
 	rows, err := q.Query(ctx,
 		`SELECT f.id, f.word, f.transl, f.lang_id
-         FROM decks_flashcards df flashcards
+         FROM decks_flashcards df 
          JOIN flashcards f ON df.flashcard_id = f.id
          WHERE f.user_id=$1 AND df.deck_id=$2
          ORDER BY f.id`,
@@ -45,7 +49,7 @@ func (s *FlashCardStorage) ListByDeck(ctx context.Context, q Querier, deckId int
 	}
 	defer rows.Close()
 
-	out := make([]entities.FlashCard, 0, 16)
+	out := make([]entities.FlashCard, 0, 16) //todo !! маппинг ошибок добавить
 
 	for rows.Next() {
 		var m models.FlashCard

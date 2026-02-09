@@ -21,6 +21,10 @@ func NewDeckStorage(pool *pgxpool.Pool) *DeckStorage {
 	return &DeckStorage{pool: pool}
 }
 
+func (s *DeckStorage) DeckPool() *pgxpool.Pool {
+	return s.pool
+}
+
 func (s *DeckStorage) ListBySession(ctx context.Context, q Querier, sessionId int64, uid int64) (*entities.Deck, error) {
 	const op = "postgresql.DeckStorage.ListBySession"
 

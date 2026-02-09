@@ -30,6 +30,25 @@ type Querier interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 }
 
+type PoolQuerier struct {
+	pool *pgxpool.Pool
+}
+
+// / todo!!! -> pgc , костыли
+func NewPoolQuerier(pool *pgxpool.Pool) *PoolQuerier {
+	return &PoolQuerier{pool: pool}
+}
+
+func (q *PoolQuerier) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
+	return q.pool.Exec(ctx, sql, args...)
+}
+func (q *PoolQuerier) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	return q.pool.Query(ctx, sql, args...)
+}
+func (q *PoolQuerier) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
+	return q.pool.QueryRow(ctx, sql, args...)
+}
+
 func New(ctx context.Context) (*pgxpool.Pool, error) {
 	const op = "storage.postgres.New"
 
