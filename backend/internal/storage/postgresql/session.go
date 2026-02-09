@@ -64,7 +64,6 @@ func (s *SessionStorage) ListSessions(ctx context.Context, q Querier, uid int64)
 
 		out = append(out, entities.Session{
 			Id:        m.Id,
-			UserId:    m.UserId,
 			Name:      m.Name,
 			Status:    m.Status,
 			Language:  m.Lang,
@@ -108,7 +107,6 @@ func (s *SessionStorage) ListLatest(ctx context.Context, q Querier, uid int64) (
 
 		out = append(out, entities.Session{
 			Id:        m.Id,
-			UserId:    m.UserId,
 			Name:      m.Name,
 			Status:    m.Status,
 			Language:  m.Lang,
@@ -144,7 +142,6 @@ func (s *SessionStorage) GetSession(ctx context.Context, q Querier, sessionId in
 
 	ss := &entities.Session{
 		Id:        m.Id,
-		UserId:    m.UserId,
 		Name:      m.Name,
 		Status:    m.Status,
 		Language:  m.Lang,
