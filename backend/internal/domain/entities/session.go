@@ -4,13 +4,12 @@ import "time"
 
 type Session struct {
 	Id        int64
-	UserId    int64
-	Name      string
+	Name      string `json:"name"`
 	StartedAt time.Time
-	EndedAt   time.Time
+	EndedAt   time.Time `json:"ended_at"`
 	Duration  time.Duration
 	Status    string
-	Language  int
-	Level     int
+	Language  int `json:"language"`
+	Level     int `json:"level"`
 	Accuracy  float64
 }
