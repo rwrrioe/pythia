@@ -90,9 +90,10 @@ func New(
 	sso := authn.NewSSO(ssoClient, 1)
 	ocr := service.NewOCRService(ocrClient)
 	learn := service.NewLearnService(4)
-	cards := service.NewCardsService()
+	cards := service.NewCardsService(flStorage, deckStorage)
 	transl, err := service.NewTranslateService(ctx, "gemini-2.5-flash-lite")
 	stats := service.NewStatsService(ssStorage, deckStorage, flStorage, txm)
+	lib := service.NewLibraryService(ssStorage, txm)
 	if err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
@@ -119,7 +120,7 @@ func New(
 	hub := hub.NewWebSocketHub()
 	wsHandlers := ws.New(hub)
 	ws.RegisterRoutes(router, wsHandlers)
-	restHandlers := rest.New(session, stats, sso, hub, redisClient)
+	restHandlers := rest.New(log, session, lib, cards, stats, sso, hub, redisClient)
 	authMiddleware := authn.New(log, appSecret)
 	requireAuthMiddleware := authn.NewRequireAuth(log)
 
