@@ -19,5 +19,5 @@ COPY . .
 ENV PYTHONPATH="${PYTHONPATH}:/app:/app/shared"
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python3", "ml_services/ocr_service/main.py"]
+CMD ["python3", "main.py"]
 
