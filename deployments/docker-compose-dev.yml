@@ -20,8 +20,7 @@ services:
     build:
       context: ..
       dockerfile: backend/Dockerfile
-      ssh:
-        - default
+
     container_name: pythia_backend
     depends_on:
       pythia_db:
@@ -73,8 +72,6 @@ services:
     build:
       context: ../sso
       dockerfile: Dockerfile
-      ssh:
-        - default
     environment:
       - GRPC_PORT=9081
       - LOGGER_ENV=local
