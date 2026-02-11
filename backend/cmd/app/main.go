@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/rwrrioe/pythia/backend/internal/app"
+	config "github.com/rwrrioe/pythia/backend/internal/config/grpconn"
 )
 
 const (
@@ -24,7 +25,23 @@ func main() {
 	log := setupLogger(env)
 	log.Info("starting app", slog.Any("env", env))
 
-	app, err := app.New(ctx, log, appSecret)
+	ocrCfg, err := config.FetchConfig(config.ConfigAttr{
+		CfgType: config.OCR,
+	})
+	if err != nil {
+		log.Error("failed to fetch ocr config")
+		panic("failed to fetch ocr config")
+	}
+
+	ssoCfg, err := config.FetchConfig(config.ConfigAttr{
+		CfgType: config.SSO,
+	})
+	if err != nil {
+		log.Error("failed to fetch ocr config")
+		panic("failed to fetch ocr config")
+	}
+
+	app, err := app.New(ctx, log, appSecret, ssoCfg, ocrCfg)
 	if err != nil {
 		panic(err)
 	}

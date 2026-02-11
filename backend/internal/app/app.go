@@ -12,6 +12,7 @@ import (
 	"github.com/rwrrioe/pythia/backend/internal/auth/authz"
 	ocr_grpc_client "github.com/rwrrioe/pythia/backend/internal/clients/ocr/grpc"
 	sso_grpc_client "github.com/rwrrioe/pythia/backend/internal/clients/sso/grpc"
+	config "github.com/rwrrioe/pythia/backend/internal/config/grpconn"
 	service "github.com/rwrrioe/pythia/backend/internal/services"
 	"github.com/rwrrioe/pythia/backend/internal/storage/postgresql"
 	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
@@ -33,6 +34,7 @@ func New(
 	ctx context.Context,
 	log *slog.Logger,
 	appSecret string,
+	ssoConf, ocrConf *config.Config,
 ) (*App, error) {
 	const op = "App.New"
 
@@ -64,20 +66,19 @@ func New(
 	//init grpc-clients
 
 	ocrConn, err := grpcconn.New(log, grpcconn.Config{
-		Addr:         "ocr:9080",
-		Timeout:      time.Minute,
-		RetriesCount: 5,
+		Addr:         ocrConf.Addr,
+		Timeout:      ocrConf.Timeout,
+		RetriesCount: ocrConf.RetriesCount,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
 
 	ssoConn, err := grpcconn.New(log, grpcconn.Config{
-		Addr:         "sso:9081",
-		Timeout:      time.Minute,
-		RetriesCount: 5,
+		Addr:         ssoConf.Addr,
+		Timeout:      ssoConf.Timeout,
+		RetriesCount: ssoConf.RetriesCount,
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
