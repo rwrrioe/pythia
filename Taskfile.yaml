@@ -55,3 +55,18 @@ tasks:
     cmds:
       - echo  "Stopping dev environment..."
       - docker compose -f ./deployments/docker-compose-dev.yml down
+  dev-build:
+    aliases:
+      - build
+    desc: "Builds docker container in the dev mode"
+    vars:
+      SERVICE: '{{.SERVICE | default "backend"}}'
+    cmds:
+      - echo "building {{.SERVICE}}..."
+      - docker compose -f ./deployments/docker-compose-dev.yml build {{.SERVICE}}
+  dev-front:
+    aliases:
+      - front
+    cmds:
+    - echo "start npm run dev"
+    - cd ./frontend && npm run dev
