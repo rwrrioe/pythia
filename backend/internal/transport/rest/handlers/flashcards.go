@@ -3,9 +3,9 @@ package rest_handlers
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	service "github.com/rwrrioe/pythia/backend/internal/services"
 	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
 	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
@@ -28,16 +28,17 @@ func NewFlashCardsHandler(storage *taskstorage.RedisStorage, ws *hub.WebSocketHu
 // FlashCards post /api/session/:sessionId/flashcards
 func (h *FlashCardsHandler) FlashCards(c *gin.Context) {
 
-	sessionId, err := strconv.Atoi(c.Param("sessionId"))
+	sessionId, err := uuid.Parse(c.Param("sessionId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "session_id is empty",
+			"error":   "invalid sessionId",
+			"details": err.Error(),
 		})
 		return
 	}
 
 	ctx := c.Request.Context()
-	flCards, err := h.session.GetFlashcards(ctx, int64(sessionId))
+	flCards, err := h.session.GetFlashcards(ctx, sessionId)
 	if err != nil {
 		if errors.Is(err, service.ErrSessionNotFound) {
 			c.JSON(http.StatusBadRequest, gin.H{

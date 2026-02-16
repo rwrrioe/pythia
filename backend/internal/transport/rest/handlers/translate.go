@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rwrrioe/pythia/backend/internal/auth/authn"
 	"github.com/rwrrioe/pythia/backend/internal/domain/requests"
 	service "github.com/rwrrioe/pythia/backend/internal/services"
@@ -31,10 +31,11 @@ func NewTranslateHandler(storage *taskstorage.RedisStorage, ws *hub.WebSocketHub
 
 // Translate post /api/session/:sessionId/task/:taskId/translate
 func (h *TranslateHandler) Translate(c *gin.Context) {
-	sessionId, err := strconv.Atoi(c.Param("sessionId"))
+	sessionId, err := uuid.Parse(c.Param("sessionId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "session_id is empty",
+			"error":   "invalid sessionId",
+			"details": err.Error(),
 		})
 		return
 	}
@@ -65,7 +66,7 @@ func (h *TranslateHandler) Translate(c *gin.Context) {
 			"stage":      "translate",
 		})
 
-		words, err := h.session.FindWords(ctx, int64(sessionId), taskId)
+		words, err := h.session.FindWords(ctx, sessionId, taskId)
 		if err != nil {
 			if errors.Is(err, service.ErrSessionNotFound) {
 				h.ws.Notify(sessionId, gin.H{

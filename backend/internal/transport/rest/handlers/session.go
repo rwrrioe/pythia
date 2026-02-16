@@ -4,9 +4,9 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rwrrioe/pythia/backend/internal/domain/requests"
 	service "github.com/rwrrioe/pythia/backend/internal/services"
 	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
@@ -58,8 +58,7 @@ func (h *SessionHandler) NewSession(c *gin.Context) {
 
 // /api/session/:sessionId/end
 func (h *SessionHandler) EndSession(c *gin.Context) {
-	sessionId, err := strconv.Atoi(c.Param("sessionId"))
-
+	sessionId, err := uuid.Parse(c.Param("sessionId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "invalid sessionId",
@@ -69,7 +68,7 @@ func (h *SessionHandler) EndSession(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	err = h.session.EndSession(ctx, int64(sessionId))
+	err = h.session.EndSession(ctx, sessionId)
 
 	if err != nil && errors.Is(err, service.ErrUnauthorized) {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -127,14 +126,7 @@ func (h *SessionHandler) EndSession(c *gin.Context) {
 func (h *SessionHandler) SessionSummary(c *gin.Context) {
 	var req requests.SummarizeSession
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	sessionId, err := strconv.Atoi(c.Param("sessionId"))
+	sessionId, err := uuid.Parse(c.Param("sessionId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "invalid sessionId",
@@ -143,10 +135,17 @@ func (h *SessionHandler) SessionSummary(c *gin.Context) {
 		return
 	}
 
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	ctx := c.Request.Context()
 
 	//summarize session
-	words, err := h.session.SummarizeSession(ctx, int64(sessionId), req.Accuracy)
+	words, err := h.session.SummarizeSession(ctx, sessionId, req.Accuracy)
 	if err != nil && errors.Is(err, service.ErrUnauthorized) {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":   "user is unauthorized",

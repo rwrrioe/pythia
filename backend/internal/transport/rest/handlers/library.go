@@ -4,9 +4,9 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	service "github.com/rwrrioe/pythia/backend/internal/services"
 )
@@ -50,15 +50,16 @@ func (h *LibraryHandler) ListSession(c *gin.Context) {
 
 // GET /api/library/session/:sessionId
 func (h *LibraryHandler) GetSession(c *gin.Context) {
-	sessionId, err := strconv.Atoi(c.Param("sessionId"))
+	sessionId, err := uuid.Parse(c.Param("sessionId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
+			"error":   "invalid sessionId",
+			"details": err.Error(),
 		})
 	}
 
 	ctx := c.Request.Context()
-	session, err := h.library.GetSession(ctx, int64(sessionId))
+	session, err := h.library.GetSession(ctx, sessionId)
 
 	if err != nil {
 		if errors.Is(err, service.ErrUnauthorized) {
@@ -78,7 +79,7 @@ func (h *LibraryHandler) GetSession(c *gin.Context) {
 			})
 		}
 	}
-	flashcards, err := h.flashcards.GetBySession(ctx, int64(sessionId))
+	flashcards, err := h.flashcards.GetBySession(ctx, sessionId)
 
 	if err != nil {
 		if errors.Is(err, service.ErrUnauthorized) {
@@ -99,8 +100,6 @@ func (h *LibraryHandler) GetSession(c *gin.Context) {
 		}
 
 	}
-
-	h.log.Info("flashcards are ", flashcards)
 
 	var dtos []entities.FlashCardDTO
 	for _, fl := range flashcards {

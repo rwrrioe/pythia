@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -38,9 +37,9 @@ func (h *OCRHandler) respondOCRErr(c *gin.Context, err error, code int, message 
 
 // /api/session/:sessionId/upload
 func (h *OCRHandler) Upload(c *gin.Context) {
-	sessionID, err := strconv.Atoi(c.Param("sessionId"))
+	sessionId, err := uuid.Parse(c.Param("sessionId"))
 	if err != nil {
-		h.respondOCRErr(c, err, http.StatusBadRequest, "invalid session_id")
+		h.respondOCRErr(c, err, http.StatusBadRequest, "invalid sessionId")
 		return
 	}
 
@@ -82,46 +81,45 @@ func (h *OCRHandler) Upload(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
-	uid, _ := authn.UIDFromContext(ctx)
+	uid, ok := authn.UIDFromContext(ctx)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   "user is unauthorized",
+			"details": "",
+		})
+		return
+	}
 
+	//creating background ctx !!TODO -> implement on gin
 	bgCtx := context.WithValue(context.Background(), "user_id", uid)
 	bgCtx, cancel := context.WithTimeout(bgCtx, 2*time.Minute)
 	go func(ctx context.Context) {
 		defer cancel()
-		h.ws.Notify(sessionID, gin.H{
+		h.ws.Notify(sessionId, gin.H{
 			"task_id":    taskID,
-			"session_id": sessionID,
+			"session_id": sessionId,
 			"status":     "processing",
 			"stage":      "ocr",
 		})
-		err := h.session.RecognizeText(ctx, int64(sessionID), taskID, data, lang)
+		err := h.session.RecognizeText(ctx, sessionId, taskID, data, lang)
 		if err != nil {
-			h.ws.Notify(sessionID, gin.H{
+			h.ws.Notify(sessionId, gin.H{
 				"task_id":    taskID,
-				"session_id": sessionID,
-				"status":     "error",
-				"error":      err.Error(),
-				"stage":      "ocr"})
-			return
-		}
-		if err != nil {
-			h.ws.Notify(sessionID, gin.H{
-				"task_id":    taskID,
-				"session_id": sessionID,
+				"session_id": sessionId,
 				"status":     "error",
 				"error":      err.Error(),
 				"stage":      "ocr"})
 			return
 		}
 
-		h.ws.Notify(sessionID, gin.H{
+		h.ws.Notify(sessionId, gin.H{
 			"task_id":    taskID,
-			"session_id": sessionID,
+			"session_id": sessionId,
 			"status":     "done",
 			"stage":      "ocr"})
 	}(bgCtx)
 	c.JSON(http.StatusAccepted, gin.H{
 		"task_id":    taskID,
-		"session_id": sessionID,
+		"session_id": sessionId,
 		"stage":      "ocr"})
 }
