@@ -1,9 +1,13 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Session struct {
-	Id        int64     `db:"id"`
+	Id        uuid.UUID `db:"id"`
 	UserId    int64     `db:"user_id"`
 	Name      string    `db:"name"`
 	Lang      int       `db:"lang_id"`
