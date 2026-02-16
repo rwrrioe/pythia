@@ -7,9 +7,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 )
+
+type RedisProvider interface {
+	Save(ctx context.Context, taskId string, task TaskDTO) error
+	Get(ctx context.Context, taskId string) (*TaskDTO, bool, error)
+	GetBySession(ctx context.Context, sessionId uuid.UUID) ([]TaskDTO, bool, error)
+	UpdateTask(ctx context.Context, taskId string, update func(task *TaskDTO)) (bool, error)
+	Delete(ctx context.Context, taskID string) error
+	SaveSession(ctx context.Context, ss SessionDTO) error
+	GetSession(ctx context.Context, sessionId uuid.UUID) (*SessionDTO, bool, error)
+	UpdateSession(ctx context.Context, sessionId uuid.UUID, update func(s *SessionDTO)) (bool, error)
+}
 
 type RedisStorage struct {
 	ttl    time.Duration
@@ -17,7 +29,7 @@ type RedisStorage struct {
 }
 
 type SessionDTO struct {
-	Id        int64           `json:"session_id"`
+	Id        uuid.UUID       `json:"session_id"`
 	Name      string          `json:"name"`
 	UserId    int64           `json:"user_id"`
 	StartedAt time.Time       `json:"started_at"`
@@ -30,7 +42,7 @@ type SessionDTO struct {
 	Words     []entities.Word `json:"imp_words"`
 }
 type TaskDTO struct {
-	SessionId int64           `json:"session_id"`
+	SessionId uuid.UUID       `json:"session_id"`
 	OCRText   []string        `json:"ocr_text"`
 	Words     []entities.Word `json:"words"`
 }
@@ -101,7 +113,7 @@ func (s *RedisStorage) Get(ctx context.Context, taskId string) (*TaskDTO, bool, 
 	return &arr[0], true, nil
 }
 
-func (s *RedisStorage) GetBySession(ctx context.Context, sessionId int64) ([]TaskDTO, bool, error) {
+func (s *RedisStorage) GetBySession(ctx context.Context, sessionId uuid.UUID) ([]TaskDTO, bool, error) {
 	q := fmt.Sprintf("@sessionId:[%d %d]", sessionId, sessionId)
 
 	res, err := s.client.FTSearchWithArgs(ctx, "idx:tasks", q, &redis.FTSearchOptions{
@@ -181,8 +193,8 @@ func (s *RedisStorage) SaveSession(ctx context.Context, ss SessionDTO) error {
 	return nil
 }
 
-func (s *RedisStorage) GetSession(ctx context.Context, ssId int64) (*SessionDTO, bool, error) {
-	key := fmt.Sprintf("session:%d", ssId)
+func (s *RedisStorage) GetSession(ctx context.Context, sessionId uuid.UUID) (*SessionDTO, bool, error) {
+	key := fmt.Sprintf("session:%d", sessionId)
 
 	val, err := s.client.Get(ctx, key).Result()
 	if err != nil {
@@ -199,8 +211,8 @@ func (s *RedisStorage) GetSession(ctx context.Context, ssId int64) (*SessionDTO,
 	return &ss, true, nil
 }
 
-func (s *RedisStorage) UpdateSession(ctx context.Context, ssId int64, update func(s *SessionDTO)) (bool, error) {
-	key := fmt.Sprintf("session:%d", ssId)
+func (s *RedisStorage) UpdateSession(ctx context.Context, sessionId uuid.UUID, update func(s *SessionDTO)) (bool, error) {
+	key := fmt.Sprintf("session:%d", sessionId)
 
 	val, err := s.client.Get(ctx, key).Result()
 	if err != nil {
