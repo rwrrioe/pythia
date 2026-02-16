@@ -16,7 +16,9 @@ func NewTxManager(pool *pgxpool.Pool) *TxManager {
 	return &TxManager{Pool: pool}
 }
 
-func (m *TxManager) WithTx(ctx context.Context, fn func(tg pgx.Tx) error) (err error) {
+func (m *TxManager) WithTx(
+	ctx context.Context,
+	fn func(tx pgx.Tx) error) (err error) {
 	const op = "postgresql.TxManager.WithTx"
 
 	tx, err := m.Pool.BeginTx(ctx, pgx.TxOptions{})
