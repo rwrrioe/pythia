@@ -91,10 +91,10 @@ func New(
 	sso := authn.NewSSO(ssoClient, 1)
 	ocr := service.NewOCRService(ocrClient)
 	learn := service.NewLearnService(4)
-	cards := service.NewCardsService(flStorage, deckStorage)
+	cards := service.NewCardsService(flStorage, deckStorage, pool)
 	transl, err := service.NewTranslateService(ctx, "gemini-2.5-flash-lite")
 	stats := service.NewStatsService(ssStorage, deckStorage, flStorage, txm)
-	lib := service.NewLibraryService(ssStorage, txm)
+	lib := service.NewLibraryService(ssStorage, pool, txm)
 	if err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
@@ -108,6 +108,7 @@ func New(
 		cards,
 		redisClient,
 		txm,
+		pool,
 		ssStorage,
 		deckStorage,
 		flStorage,
