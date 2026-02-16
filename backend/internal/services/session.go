@@ -38,7 +38,8 @@ type SessionService struct {
 	Flashcards *FlashCardsService
 	Redis      *taskstorage.RedisStorage
 
-	txm *postgresql.TxManager
+	pool postgresql.Querier
+	txm  *postgresql.TxManager
 
 	SessionProvider    SessionProvider
 	DeckProvider       DeckProvider
@@ -53,6 +54,7 @@ func NewSessionService(
 	fl *FlashCardsService,
 	redis *taskstorage.RedisStorage,
 	txm *postgresql.TxManager,
+	pool postgresql.Querier,
 	ss SessionProvider,
 	deck DeckProvider,
 	flProvider FlashCardProvider,
@@ -65,6 +67,7 @@ func NewSessionService(
 		Learn:              learn,
 		Redis:              redis,
 		txm:                txm,
+		pool:               pool,
 		SessionProvider:    ss,
 		DeckProvider:       deck,
 		FlashCardsProvider: flProvider,
@@ -347,8 +350,6 @@ func (s *SessionService) SummarizeSession(ctx context.Context, sessionId int64, 
 	return ss.Words, nil
 }
 
-// sessions in library
-
 func (s *SessionService) GetSession(ctx context.Context, sessionId int64) (*entities.Session, error) {
 	const op = "services.SessionService.GetSession"
 
@@ -361,8 +362,7 @@ func (s *SessionService) GetSession(ctx context.Context, sessionId int64) (*enti
 		return nil, fmt.Errorf("%s:%w", op, ErrForbidden)
 	}
 
-	pool := postgresql.NewPoolQuerier(s.txm.Pool)
-	session, err := s.SessionProvider.GetSession(ctx, pool, sessionId, uid)
+	session, err := s.SessionProvider.GetSession(ctx, s.pool, sessionId, uid)
 	if err != nil {
 		if errors.Is(err, postgresql.ErrSessionNotFound) {
 			return nil, fmt.Errorf("%s:%w", op, ErrSessionNotFound)

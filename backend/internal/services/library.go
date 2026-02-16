@@ -11,18 +11,20 @@ import (
 )
 
 type LibraryService struct {
-	session    SessionProvider
-	flashcards FlashCardProvider
+	session SessionProvider
 
-	txm *postgresql.TxManager
+	pool postgresql.Querier
+	txm  *postgresql.TxManager
 }
 
 func NewLibraryService(
 	session SessionProvider,
+	pool postgresql.Querier,
 	txm *postgresql.TxManager,
 ) *LibraryService {
 	return &LibraryService{
 		session: session,
+		pool:    pool,
 		txm:     txm,
 	}
 }
@@ -35,8 +37,7 @@ func (s *LibraryService) Library(ctx context.Context) ([]entities.Session, error
 		return nil, ErrUnauthorized
 	}
 
-	q := postgresql.NewPoolQuerier(s.txm.Pool)
-	sessions, err := s.session.ListSessions(ctx, q, uid)
+	sessions, err := s.session.ListSessions(ctx, s.pool, uid)
 	if err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
@@ -52,8 +53,7 @@ func (s *LibraryService) GetSession(ctx context.Context, sessionId int64) (*enti
 		return nil, ErrUnauthorized
 	}
 
-	q := postgresql.NewPoolQuerier(s.txm.Pool)
-	ss, err := s.session.GetSession(ctx, q, sessionId, uid)
+	ss, err := s.session.GetSession(ctx, s.pool, sessionId, uid)
 	if err != nil {
 		if errors.Is(err, postgresql.ErrSessionNotFound) {
 			return nil, fmt.Errorf("%s:%w", op, ErrSessionNotFound)

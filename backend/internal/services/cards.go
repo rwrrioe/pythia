@@ -27,18 +27,21 @@ type DeckProvider interface {
 }
 
 type FlashCardsService struct {
-	//TODO !!! костыли
 	flashcards FlashCardProvider
 	decks      DeckProvider
+
+	pool postgresql.Querier
 }
 
 func NewCardsService(
 	flashcards FlashCardProvider,
 	decks DeckProvider,
+	pool postgresql.Querier,
 ) *FlashCardsService {
 	return &FlashCardsService{
 		flashcards: flashcards,
 		decks:      decks,
+		pool:       pool,
 	}
 }
 
@@ -61,9 +64,7 @@ func (s *FlashCardsService) GetBySession(ctx context.Context, sessionId int64) (
 		return nil, fmt.Errorf("%s:%w", op, ErrUnauthorized)
 	}
 
-	//todo pool публичный -> костыль
-	q := postgresql.NewPoolQuerier(s.decks.DeckPool())
-	deck, err := s.decks.ListBySession(ctx, q, sessionId, uid)
+	deck, err := s.decks.ListBySession(ctx, s.pool, sessionId, uid)
 	if err != nil {
 		if errors.Is(err, postgresql.ErrDeckNotFound) {
 			return nil, fmt.Errorf("%s:%w", op, ErrDeckNotFound)
@@ -73,8 +74,7 @@ func (s *FlashCardsService) GetBySession(ctx context.Context, sessionId int64) (
 	}
 	slog.Any(op, deck)
 
-	q = postgresql.NewPoolQuerier(s.flashcards.FlashcardsPool())
-	flCards, err := s.flashcards.ListByDeck(ctx, q, deck.Id, uid)
+	flCards, err := s.flashcards.ListByDeck(ctx, s.pool, deck.Id, uid)
 	if err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
