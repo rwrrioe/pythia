@@ -3,9 +3,9 @@ package ws_handlers
 import (
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	hub "github.com/rwrrioe/pythia/backend/internal/transport/ws/ws_hub"
 )
@@ -25,7 +25,7 @@ func NewHandler(ws *hub.WebSocketHub) *Handler {
 }
 
 func (h *Handler) WebSocket(c *gin.Context) {
-	sessionId, err := strconv.Atoi(c.Query("session_id"))
+	sessionId, err := uuid.Parse(c.Query("session_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "invalid sessionId",
