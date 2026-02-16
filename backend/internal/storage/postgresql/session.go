@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -123,7 +124,7 @@ func (s *SessionStorage) ListLatest(ctx context.Context, q Querier, uid int64) (
 	return out, nil
 }
 
-func (s *SessionStorage) GetSession(ctx context.Context, q Querier, sessionId int64, uid int64) (*entities.Session, error) {
+func (s *SessionStorage) GetSession(ctx context.Context, q Querier, sessionId uuid.UUID, uid int64) (*entities.Session, error) {
 	const op = "postgresql.SessionStorage.GetSession"
 
 	var m models.Session
@@ -152,10 +153,10 @@ func (s *SessionStorage) GetSession(ctx context.Context, q Querier, sessionId in
 	return ss, nil
 }
 
-func (s *SessionStorage) SaveSession(ctx context.Context, q Querier, ss entities.Session, uid int64) (int, error) {
+func (s *SessionStorage) SaveSession(ctx context.Context, q Querier, ss entities.Session, uid int64) (uuid.UUID, error) {
 	const op = "storage.SessionStorage.SaveSession"
 
-	var id int
+	var id uuid.UUID
 	sql := `
 		INSERT INTO sessions (name, user_id, status, lang_id, started_at, ended_at, accuracy)
 		VALUES ($1, $2, $3, $4, $5,$6,$7)
@@ -175,16 +176,16 @@ func (s *SessionStorage) SaveSession(ctx context.Context, q Querier, ss entities
 		var pgErr *pgconn.PgError
 
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return 0, fmt.Errorf("%s:%w", op, ErrSessionAlreadyExists)
+			return uuid.Nil, fmt.Errorf("%s:%w", op, ErrSessionAlreadyExists)
 		}
 
-		return 0, fmt.Errorf("%s:%w", op, err)
+		return uuid.Nil, fmt.Errorf("%s:%w", op, err)
 	}
 
 	return id, nil
 }
 
-func (s *SessionStorage) TryMarkFinished(ctx context.Context, q Querier, sessionId int64, uid int64, endedAt time.Time) (bool, error) {
+func (s *SessionStorage) TryMarkFinished(ctx context.Context, q Querier, sessionId uuid.UUID, uid int64, endedAt time.Time) (bool, error) {
 	const op = "postgresql.SessionStorage.MarkFinished"
 
 	cmd, err := q.Exec(ctx, `
@@ -224,7 +225,7 @@ func (s *SessionStorage) TryMarkFinished(ctx context.Context, q Querier, session
 	return true, nil
 }
 
-func (s *SessionStorage) UpdateAccuracy(ctx context.Context, q Querier, sessionId int64, uid int64, accuracy float64) error {
+func (s *SessionStorage) UpdateAccuracy(ctx context.Context, q Querier, sessionId uuid.UUID, uid int64, accuracy float64) error {
 	const op = "postgresql.SessionStorage.UpdateAccuracy"
 
 	cmd, err := q.Exec(ctx, `

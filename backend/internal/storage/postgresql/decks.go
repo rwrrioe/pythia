@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -25,7 +26,7 @@ func (s *DeckStorage) DeckPool() *pgxpool.Pool {
 	return s.pool
 }
 
-func (s *DeckStorage) ListBySession(ctx context.Context, q Querier, sessionId int64, uid int64) (*entities.Deck, error) {
+func (s *DeckStorage) ListBySession(ctx context.Context, q Querier, sessionId uuid.UUID, uid int64) (*entities.Deck, error) {
 	const op = "postgresql.DeckStorage.ListBySession"
 
 	var d models.Deck
@@ -33,7 +34,7 @@ func (s *DeckStorage) ListBySession(ctx context.Context, q Querier, sessionId in
 		`SELECT id, user_id, session_id
          FROM decks
          WHERE user_id=$1 AND session_id=$2`,
-		uid, int(sessionId),
+		uid, sessionId,
 	).Scan(&d.Id, &d.UserId, &d.SessionId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -48,10 +49,10 @@ func (s *DeckStorage) ListBySession(ctx context.Context, q Querier, sessionId in
 	}, nil
 }
 
-func (s *DeckStorage) GetOrCreate(ctx context.Context, q Querier, sessionId, uid int64) (int, error) {
+func (s *DeckStorage) GetOrCreate(ctx context.Context, q Querier, sessionId uuid.UUID, uid int64) (uuid.UUID, error) {
 	const op = "postgresql.DeckStorage.GetOrCreate"
 
-	var id int
+	var id uuid.UUID
 
 	err := q.QueryRow(ctx,
 		`INSERT INTO decks (user_id, session_id)
@@ -62,12 +63,12 @@ func (s *DeckStorage) GetOrCreate(ctx context.Context, q Querier, sessionId, uid
 		uid, sessionId,
 	).Scan(&id)
 	if err != nil {
-		return 0, fmt.Errorf("%s:%w", op, err)
+		return uuid.Nil, fmt.Errorf("%s:%w", op, err)
 	}
 	return id, nil
 }
 
-func (s *DeckStorage) AttachFlashcard(ctx context.Context, q Querier, deckId int, flId int) error {
+func (s *DeckStorage) AttachFlashcard(ctx context.Context, q Querier, deckId uuid.UUID, flashcardId uuid.UUID) error {
 	const op = "postgresql.DeckStorage.AttachFlashcard"
 
 	_, err := q.Exec(ctx,
@@ -75,7 +76,7 @@ func (s *DeckStorage) AttachFlashcard(ctx context.Context, q Querier, deckId int
          VALUES ($1, $2)
          ON CONFLICT (deck_id, flashcard_id ) DO NOTHING;
          `,
-		deckId, flId,
+		deckId, flashcardId,
 	)
 	if err != nil {
 		var pgErr *pgconn.PgError

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -33,7 +34,7 @@ func (s *FlashCardStorage) FlashcardsPool() *pgxpool.Pool {
 }
 
 // flashcards конкретной деки
-func (s *FlashCardStorage) ListByDeck(ctx context.Context, q Querier, deckId int, uid int64) ([]entities.FlashCard, error) {
+func (s *FlashCardStorage) ListByDeck(ctx context.Context, q Querier, deckId uuid.UUID, uid int64) ([]entities.FlashCard, error) {
 	const op = "postgresql.FlashCardStorage.ListByDeck"
 
 	rows, err := q.Query(ctx,
@@ -61,8 +62,8 @@ func (s *FlashCardStorage) ListByDeck(ctx context.Context, q Querier, deckId int
 			Id:     m.Id,
 			Word:   m.Word,
 			Transl: m.Transl,
-			Lang:   m.Lang, // или мапь в строку, если entities ожидает другое
-			Desc:   "",     // description нет в БД
+			Lang:   m.Lang,
+			Desc:   "", // description нет в БД
 		})
 	}
 
@@ -114,10 +115,10 @@ func (s *FlashCardStorage) List(ctx context.Context, q Querier, uid int64) ([]en
 	return out, nil
 }
 
-func (s *FlashCardStorage) GetOrCreate(ctx context.Context, q Querier, flCard entities.FlashCard, uid int64) (int, error) {
+func (s *FlashCardStorage) GetOrCreate(ctx context.Context, q Querier, flCard entities.FlashCard, uid int64) (uuid.UUID, error) {
 	const op = "postgresql.FlashCardStorage.GetOrCreate"
 
-	var id int
+	var id uuid.UUID
 
 	err := q.QueryRow(ctx, `
 		INSERT INTO flashcards (user_id, word, transl, lang_id)
@@ -127,5 +128,9 @@ func (s *FlashCardStorage) GetOrCreate(ctx context.Context, q Querier, flCard en
 		RETURNING id
 	`, uid, flCard.Word, flCard.Transl, flCard.Lang).Scan(&id)
 
-	return id, err
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("%s:%w", op, err)
+	}
+
+	return id, nil
 }
