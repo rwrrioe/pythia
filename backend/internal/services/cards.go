@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rwrrioe/pythia/backend/internal/auth/authn"
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
@@ -14,15 +15,15 @@ import (
 
 type FlashCardProvider interface {
 	List(ctx context.Context, q postgresql.Querier, uid int64) ([]entities.FlashCard, error)
-	ListByDeck(ctx context.Context, q postgresql.Querier, deckId int, uid int64) ([]entities.FlashCard, error)
-	GetOrCreate(ctx context.Context, q postgresql.Querier, flCard entities.FlashCard, uid int64) (int, error)
+	ListByDeck(ctx context.Context, q postgresql.Querier, deckId uuid.UUID, uid int64) ([]entities.FlashCard, error)
+	GetOrCreate(ctx context.Context, q postgresql.Querier, flCard entities.FlashCard, uid int64) (uuid.UUID, error)
 	FlashcardsPool() *pgxpool.Pool
 }
 
 type DeckProvider interface {
-	ListBySession(ctx context.Context, q postgresql.Querier, sessionId int64, uid int64) (*entities.Deck, error)
-	AttachFlashcard(ctx context.Context, q postgresql.Querier, deckId int, flId int) error
-	GetOrCreate(ctx context.Context, q postgresql.Querier, sessionId int64, uid int64) (int, error)
+	ListBySession(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid int64) (*entities.Deck, error)
+	AttachFlashcard(ctx context.Context, q postgresql.Querier, deckId uuid.UUID, flashcardId uuid.UUID) error
+	GetOrCreate(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid int64) (uuid.UUID, error)
 	DeckPool() *pgxpool.Pool
 }
 
@@ -56,7 +57,7 @@ func (s *FlashCardsService) BuildCards(ctx context.Context, words []entities.Wor
 	return dto
 }
 
-func (s *FlashCardsService) GetBySession(ctx context.Context, sessionId int64) ([]entities.FlashCard, error) {
+func (s *FlashCardsService) GetBySession(ctx context.Context, sessionId uuid.UUID) ([]entities.FlashCard, error) {
 	const op = "service.FlashcardService.GetBySession"
 
 	uid, ok := authn.UIDFromContext(ctx)

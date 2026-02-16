@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/rwrrioe/pythia/backend/internal/auth/authn"
 	"github.com/rwrrioe/pythia/backend/internal/domain/entities"
 	"github.com/rwrrioe/pythia/backend/internal/storage/postgresql"
@@ -45,7 +46,7 @@ func (s *LibraryService) Library(ctx context.Context) ([]entities.Session, error
 	return sessions, nil
 }
 
-func (s *LibraryService) GetSession(ctx context.Context, sessionId int64) (*entities.Session, error) {
+func (s *LibraryService) GetSession(ctx context.Context, sessionId uuid.UUID) (*entities.Session, error) {
 	const op = "service.Libraryservice.GetSession"
 
 	uid, ok := authn.UIDFromContext(ctx)

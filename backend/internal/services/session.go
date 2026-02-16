@@ -7,6 +7,7 @@ import (
 
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
 	"github.com/rwrrioe/pythia/backend/internal/auth/authn"
@@ -18,12 +19,12 @@ import (
 )
 
 type SessionProvider interface {
-	GetSession(ctx context.Context, q postgresql.Querier, sessionId int64, uid int64) (*entities.Session, error)
+	GetSession(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid int64) (*entities.Session, error)
 	ListSessions(ctx context.Context, q postgresql.Querier, uid int64) ([]entities.Session, error)
 	ListLatest(ctx context.Context, q postgresql.Querier, uid int64) ([]entities.Session, error)
-	SaveSession(ctx context.Context, q postgresql.Querier, ss entities.Session, uid int64) (int, error)
-	TryMarkFinished(ctx context.Context, q postgresql.Querier, sessionId int64, uid int64, endedAt time.Time) (bool, error)
-	UpdateAccuracy(ctx context.Context, q postgresql.Querier, sessionId int64, uid int64, accuracy float64) error
+	SaveSession(ctx context.Context, q postgresql.Querier, ss entities.Session, uid int64) (uuid.UUID, error)
+	TryMarkFinished(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid int64, endedAt time.Time) (bool, error)
+	UpdateAccuracy(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid int64, accuracy float64) error
 }
 
 const (
@@ -36,11 +37,11 @@ type SessionService struct {
 	Translate  *TranslateService
 	Learn      *LearnService
 	Flashcards *FlashCardsService
-	Redis      *taskstorage.RedisStorage
 
 	pool postgresql.Querier
 	txm  *postgresql.TxManager
 
+	RedisProvider      taskstorage.RedisProvider
 	SessionProvider    SessionProvider
 	DeckProvider       DeckProvider
 	FlashCardsProvider FlashCardProvider
@@ -52,7 +53,7 @@ func NewSessionService(
 	transl *TranslateService,
 	learn *LearnService,
 	fl *FlashCardsService,
-	redis *taskstorage.RedisStorage,
+	redis taskstorage.RedisProvider,
 	txm *postgresql.TxManager,
 	pool postgresql.Querier,
 	ss SessionProvider,
@@ -65,7 +66,7 @@ func NewSessionService(
 		OCR:                ocr,
 		Translate:          transl,
 		Learn:              learn,
-		Redis:              redis,
+		RedisProvider:      redis,
 		txm:                txm,
 		pool:               pool,
 		SessionProvider:    ss,
@@ -77,12 +78,12 @@ func NewSessionService(
 }
 
 // sesison userflow
-func (s *SessionService) StartSession(ctx context.Context, req requests.CreateSession) (int64, error) {
+func (s *SessionService) StartSession(ctx context.Context, req requests.CreateSession) (uuid.UUID, error) {
 	const op = "service.SessionService.NewSession"
 
 	uid, ok := authn.UIDFromContext(ctx)
 	if !ok {
-		return 0, fmt.Errorf("%s:%w", op, ErrUnauthorized)
+		return uuid.Nil, fmt.Errorf("%s:%w", op, ErrUnauthorized)
 	}
 
 	ssion := entities.Session{
@@ -94,24 +95,24 @@ func (s *SessionService) StartSession(ctx context.Context, req requests.CreateSe
 
 	sessionId, err := s.SessionProvider.SaveSession(ctx, s.txm.Pool, ssion, uid)
 	if err != nil {
-		return 0, fmt.Errorf("%s:%w", op, err)
+		return uuid.Nil, fmt.Errorf("%s:%w", op, err)
 	}
 
-	if err := s.Redis.SaveSession(ctx, taskstorage.SessionDTO{
-		Id:        int64(sessionId),
+	if err := s.RedisProvider.SaveSession(ctx, taskstorage.SessionDTO{
+		Id:        sessionId,
 		UserId:    uid,
 		Name:      ssion.Name,
 		Status:    ssion.Status,
 		Language:  ssion.Language,
 		StartedAt: ssion.StartedAt,
 	}); err != nil {
-		return 0, fmt.Errorf("%s:%w", op, err)
+		return uuid.Nil, fmt.Errorf("%s:%w", op, err)
 	}
 
-	return int64(sessionId), nil
+	return sessionId, nil
 }
 
-func (s *SessionService) RecognizeText(ctx context.Context, sessionId int64, taskId string, data []byte, lang string) error {
+func (s *SessionService) RecognizeText(ctx context.Context, sessionId uuid.UUID, taskId string, data []byte, lang string) error {
 	const op = "service.SessionService.RecognizeText"
 
 	uid, ok := authn.UIDFromContext(ctx)
@@ -128,7 +129,7 @@ func (s *SessionService) RecognizeText(ctx context.Context, sessionId int64, tas
 
 	}
 
-	if err := s.Redis.Save(ctx, taskId, taskstorage.TaskDTO{
+	if err := s.RedisProvider.Save(ctx, taskId, taskstorage.TaskDTO{
 		SessionId: sessionId,
 		OCRText:   txt,
 	}); err != nil {
@@ -137,7 +138,7 @@ func (s *SessionService) RecognizeText(ctx context.Context, sessionId int64, tas
 	return nil
 }
 
-func (s *SessionService) FindWords(ctx context.Context, sessionId int64, taskId string) ([]entities.Word, error) {
+func (s *SessionService) FindWords(ctx context.Context, sessionId uuid.UUID, taskId string) ([]entities.Word, error) {
 	const op = "service.SessionService.FindWords"
 
 	uid, ok := authn.UIDFromContext(ctx)
@@ -148,7 +149,7 @@ func (s *SessionService) FindWords(ctx context.Context, sessionId int64, taskId 
 		return nil, fmt.Errorf("%s:%w", op, ErrForbidden)
 	}
 
-	t, ok, err := s.Redis.Get(ctx, taskId)
+	t, ok, err := s.RedisProvider.Get(ctx, taskId)
 	if ok != true {
 		return nil, fmt.Errorf("%s:%s", op, ErrTaskNotFound)
 	}
@@ -157,7 +158,7 @@ func (s *SessionService) FindWords(ctx context.Context, sessionId int64, taskId 
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
 
-	ss, ok, err := s.Redis.GetSession(ctx, sessionId)
+	ss, ok, err := s.RedisProvider.GetSession(ctx, sessionId)
 	if ok != true {
 		return nil, fmt.Errorf("%s:%s", op, ErrSessionNotFound)
 	}
@@ -170,7 +171,7 @@ func (s *SessionService) FindWords(ctx context.Context, sessionId int64, taskId 
 		Lang:  LangsMap[ss.Language],
 	})
 
-	if ok, err = s.Redis.UpdateTask(ctx, taskId, func(task *taskstorage.TaskDTO) {
+	if ok, err = s.RedisProvider.UpdateTask(ctx, taskId, func(task *taskstorage.TaskDTO) {
 		task.Words = words
 	}); err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
@@ -181,7 +182,7 @@ func (s *SessionService) FindWords(ctx context.Context, sessionId int64, taskId 
 	return words, nil
 }
 
-func (s *SessionService) EndSession(ctx context.Context, sessionId int64) error {
+func (s *SessionService) EndSession(ctx context.Context, sessionId uuid.UUID) error {
 	const op = "service.SessionService.EndSession"
 
 	uid, ok := authn.UIDFromContext(ctx)
@@ -193,7 +194,7 @@ func (s *SessionService) EndSession(ctx context.Context, sessionId int64) error 
 	}
 
 	//find the most important words read redis + call translate
-	ss, ok, err := s.Redis.GetSession(ctx, sessionId)
+	ss, ok, err := s.RedisProvider.GetSession(ctx, sessionId)
 	if err != nil {
 		return fmt.Errorf("%s:%w", op, err)
 	}
@@ -201,7 +202,7 @@ func (s *SessionService) EndSession(ctx context.Context, sessionId int64) error 
 		return fmt.Errorf("%s:%s", op, ErrSessionNotFound)
 	}
 
-	tasks, ok, err := s.Redis.GetBySession(ctx, sessionId)
+	tasks, ok, err := s.RedisProvider.GetBySession(ctx, sessionId)
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return fmt.Errorf("%s:%w", op, ErrNoWords)
@@ -269,7 +270,7 @@ func (s *SessionService) EndSession(ctx context.Context, sessionId int64) error 
 	}
 
 	//commit + redis update
-	_, _ = s.Redis.UpdateSession(ctx, sessionId, func(dto *taskstorage.SessionDTO) {
+	_, _ = s.RedisProvider.UpdateSession(ctx, sessionId, func(dto *taskstorage.SessionDTO) {
 		dto.Status = Finished
 		dto.EndedAt = endedAt
 		dto.Words = impWords
@@ -278,7 +279,7 @@ func (s *SessionService) EndSession(ctx context.Context, sessionId int64) error 
 	return nil
 }
 
-func (s *SessionService) GetFlashcards(ctx context.Context, sessionId int64) ([]entities.FlashCardDTO, error) {
+func (s *SessionService) GetFlashcards(ctx context.Context, sessionId uuid.UUID) ([]entities.FlashCardDTO, error) {
 	const op = "service.SessionService.GetFlashcards"
 
 	uid, ok := authn.UIDFromContext(ctx)
@@ -289,7 +290,7 @@ func (s *SessionService) GetFlashcards(ctx context.Context, sessionId int64) ([]
 		return nil, fmt.Errorf("%s:%w", op, ErrForbidden)
 	}
 
-	ss, ok, err := s.Redis.GetSession(ctx, sessionId)
+	ss, ok, err := s.RedisProvider.GetSession(ctx, sessionId)
 	if ok != true {
 		return nil, fmt.Errorf("%s:%s", op, ErrSessionNotFound)
 	}
@@ -301,7 +302,7 @@ func (s *SessionService) GetFlashcards(ctx context.Context, sessionId int64) ([]
 	return flCards, nil
 }
 
-func (s *SessionService) Quiz(ctx context.Context, sessionId int64) ([]entities.QuizQuestion, error) {
+func (s *SessionService) Quiz(ctx context.Context, sessionId uuid.UUID) ([]entities.QuizQuestion, error) {
 	const op = "service.SessionService.Quiz"
 
 	uid, ok := authn.UIDFromContext(ctx)
@@ -312,7 +313,7 @@ func (s *SessionService) Quiz(ctx context.Context, sessionId int64) ([]entities.
 		return nil, fmt.Errorf("%s:%w", op, ErrForbidden)
 	}
 
-	ss, ok, err := s.Redis.GetSession(ctx, sessionId)
+	ss, ok, err := s.RedisProvider.GetSession(ctx, sessionId)
 	if ok != true {
 		return nil, fmt.Errorf("%s:%s", op, ErrSessionNotFound)
 	}
@@ -324,7 +325,7 @@ func (s *SessionService) Quiz(ctx context.Context, sessionId int64) ([]entities.
 	return quiz, nil
 }
 
-func (s *SessionService) SummarizeSession(ctx context.Context, sessionId int64, accuracy float64) ([]entities.Word, error) {
+func (s *SessionService) SummarizeSession(ctx context.Context, sessionId uuid.UUID, accuracy float64) ([]entities.Word, error) {
 	const op = "service.SessionService.SummarizeSession"
 
 	uid, ok := authn.UIDFromContext(ctx)
@@ -339,7 +340,7 @@ func (s *SessionService) SummarizeSession(ctx context.Context, sessionId int64, 
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
 
-	ss, ok, err := s.Redis.GetSession(ctx, sessionId)
+	ss, ok, err := s.RedisProvider.GetSession(ctx, sessionId)
 	if err != nil {
 		return nil, fmt.Errorf("%s:%w", op, err)
 	}
@@ -350,7 +351,7 @@ func (s *SessionService) SummarizeSession(ctx context.Context, sessionId int64, 
 	return ss.Words, nil
 }
 
-func (s *SessionService) GetSession(ctx context.Context, sessionId int64) (*entities.Session, error) {
+func (s *SessionService) GetSession(ctx context.Context, sessionId uuid.UUID) (*entities.Session, error) {
 	const op = "services.SessionService.GetSession"
 
 	uid, ok := authn.UIDFromContext(ctx)
