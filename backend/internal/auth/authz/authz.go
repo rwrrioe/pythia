@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/google/uuid"
 	taskstorage "github.com/rwrrioe/pythia/backend/internal/storage/redis/task_storage"
 )
 
@@ -14,7 +15,7 @@ var (
 )
 
 type AuthorizeService interface {
-	CanAccessSession(ctx context.Context, uid int64, sessionId int64) error
+	CanAccessSession(ctx context.Context, uid int64, sessionId uuid.UUID) error
 }
 
 type authorizer struct {
@@ -29,7 +30,7 @@ func NewAuthorizer(redis *taskstorage.RedisStorage, log *slog.Logger) AuthorizeS
 	}
 }
 
-func (a *authorizer) CanAccessSession(ctx context.Context, uid int64, sessionId int64) error {
+func (a *authorizer) CanAccessSession(ctx context.Context, uid int64, sessionId uuid.UUID) error {
 	const op = "authz.authorizer.CanAccessSession"
 
 	ss, ok, err := a.redis.GetSession(ctx, sessionId)
