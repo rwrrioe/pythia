@@ -1,5 +1,7 @@
 package entities
 
+import "github.com/google/uuid"
+
 type FlashCardDTO struct {
 	Word        string `json:"word"`
 	Translation string `json:"translation"`
@@ -7,7 +9,7 @@ type FlashCardDTO struct {
 }
 
 type FlashCard struct {
-	Id     int
+	Id     uuid.UUID
 	Word   string
 	Transl string
 	Desc   string

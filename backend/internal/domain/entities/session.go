@@ -1,9 +1,13 @@
 package entities
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Session struct {
-	Id        int64
+	Id        uuid.UUID
 	Name      string `json:"name"`
 	StartedAt time.Time
 	EndedAt   time.Time `json:"ended_at"`
