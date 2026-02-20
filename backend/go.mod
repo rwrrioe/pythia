@@ -10,7 +10,7 @@ require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/redis/go-redis/v9 v9.17.2
 	github.com/rwrrioe/pythia_protos v0.0.0-20251104094248-499daad8867a
-	github.com/rwrrioe/sso_protos v0.0.0-20260115162349-67924d688049
+	github.com/rwrrioe/sso_protos v0.0.0-20260220072734-89e3a333ae1c
 	google.golang.org/genai v1.32.0
 )
 
