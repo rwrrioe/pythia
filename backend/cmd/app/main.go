@@ -16,6 +16,7 @@ const (
 )
 
 func main() {
+
 	_ = os.Getenv("GEMINI_API_KEY")
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()

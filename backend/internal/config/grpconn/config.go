@@ -16,17 +16,17 @@ const (
 )
 
 type ocrCfg struct {
-	host         string `env:"OCR_HOST" env-default:"ocr"`
-	port         string `env:"OCR_PORT" env-default:"50051"`
-	timeout      string `env:"OCR_TIMEOUT" env-default:"1m"`
-	retriesCount string `env:"OCR_RETRIES" env-default:"10"`
+	Host         string `env:"OCR_HOST" env-default:"ocr"`
+	Port         string `env:"OCR_PORT" env-default:"50051"`
+	Timeout      string `env:"OCR_TIMEOUT" env-default:"1m"`
+	RetriesCount string `env:"OCR_RETRIES" env-default:"10"`
 }
 
 type ssoCfg struct {
-	host         string `env:"SSO_HOST" env-default:"sso"`
-	port         string `env:"SSO_PORT" env-default:"9081"`
-	timeout      string `env:"SSO_TIMEOUT" env-default:"1m"`
-	retriesCount string `env:"SSO_RETIRES" env-default:"10"`
+	Host         string `env:"SSO_HOST" env-default:"sso"`
+	Port         string `env:"SSO_PORT" env-default:"9081"`
+	Timeout      string `env:"SSO_TIMEOUT" env-default:"1m"`
+	RetriesCount string `env:"SSO_RETIRES" env-default:"10"`
 }
 
 type Config struct {
@@ -50,13 +50,13 @@ func FetchConfig(attr ConfigAttr) (*Config, error) {
 			return nil, fmt.Errorf("%s:%w", op, err)
 		}
 
-		addr := fmt.Sprintf("%s:%s", ocr.host, ocr.port)
-		timeout, err := time.ParseDuration(ocr.timeout)
+		addr := fmt.Sprintf("%s:%s", ocr.Host, ocr.Port)
+		timeout, err := time.ParseDuration(ocr.Timeout)
 		if err != nil {
 			return nil, fmt.Errorf("%s:%w", op, err)
 		}
 
-		retries, err := strconv.Atoi(ocr.retriesCount)
+		retries, err := strconv.Atoi(ocr.RetriesCount)
 		if err != nil {
 			return nil, fmt.Errorf("%s:%w", op, err)
 		}
@@ -73,13 +73,13 @@ func FetchConfig(attr ConfigAttr) (*Config, error) {
 			return nil, fmt.Errorf("%s:%w", op, err)
 		}
 
-		addr := fmt.Sprintf("%s:%s", sso.host, sso.port)
-		timeout, err := time.ParseDuration(sso.timeout)
+		addr := fmt.Sprintf("%s:%s", sso.Host, sso.Port)
+		timeout, err := time.ParseDuration(sso.Timeout)
 		if err != nil {
 			return nil, fmt.Errorf("%s:%w", op, err)
 		}
 
-		retries, err := strconv.Atoi(sso.retriesCount)
+		retries, err := strconv.Atoi(sso.RetriesCount)
 		if err != nil {
 			return nil, fmt.Errorf("%s:%w", op, err)
 		}
