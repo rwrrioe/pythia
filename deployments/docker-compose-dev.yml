@@ -20,7 +20,6 @@ services:
     build:
       context: ..
       dockerfile: backend/Dockerfile
-
     container_name: pythia_backend
     depends_on:
       pythia_db:
@@ -39,8 +38,14 @@ services:
       - DB_HOST=pythia_db
       - DB_PORT=5432
       - DB_NAME=pythiadb
-      - OCR_SERVICE_HOST=ocr
-      - OCR_SERVICE_PORT=9080
+      - OCR_HOST=ocr
+      - OCR_PORT=50051
+      - SSO_HOST=sso
+      - SSO_PORT=9081
+      - OCR_TIMEOUT=1m
+      - SSO_TIMEOUT=1m
+      - OCR_RETRIES=10
+      - SSO_RETRIES=10
     env_file:
       - ../backend/cmd/app/.env
     ports:
@@ -63,7 +68,7 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     ports:
-      - "9080:9080"
+      - "9080:50051"
     volumes:
       - ../shared:/app/shared
     networks:
