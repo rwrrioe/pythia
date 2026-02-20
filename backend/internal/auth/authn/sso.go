@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	sso_grpc_client "github.com/rwrrioe/pythia/backend/internal/clients/sso/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -23,8 +24,8 @@ var (
 
 type SSOService interface {
 	Login(ctx context.Context, email, password string) (string, error)
-	Register(ctx context.Context, email, password string) (int64, error)
-	IsAdmin(ctx context.Context, userID int64) (bool, error)
+	Register(ctx context.Context, email, password string) (uuid.UUID, error)
+	IsAdmin(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 
 type service struct {
@@ -46,15 +47,15 @@ func (s *service) Login(ctx context.Context, email, password string) (string, er
 	return "", mapSSOErr("auth.Login", err)
 }
 
-func (s *service) Register(ctx context.Context, email, password string) (int64, error) {
+func (s *service) Register(ctx context.Context, email, password string) (uuid.UUID, error) {
 	uid, err := s.sso.Register(ctx, email, password)
 	if err == nil {
 		return uid, nil
 	}
-	return 0, mapSSOErr("auth.Register", err)
+	return uuid.Nil, mapSSOErr("auth.Register", err)
 }
 
-func (s *service) IsAdmin(ctx context.Context, userID int64) (bool, error) {
+func (s *service) IsAdmin(ctx context.Context, userID uuid.UUID) (bool, error) {
 	ok, err := s.sso.IsAdmin(ctx, userID)
 	if err == nil {
 		return ok, nil

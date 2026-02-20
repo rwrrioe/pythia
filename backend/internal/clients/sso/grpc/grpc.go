@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"log/slog"
 
-	ssov1 "github.com/rwrrioe/sso_protos/gen/go/sso"
+	"github.com/google/uuid"
+	ssov2 "github.com/rwrrioe/sso_protos/v2/gen/go/sso/sso"
 	"google.golang.org/grpc"
 )
 
 type Client struct {
-	api ssov1.AuthClient
+	api ssov2.AuthClient
 	log *slog.Logger
 }
 
@@ -18,7 +19,7 @@ func New(
 	cc *grpc.ClientConn,
 	log *slog.Logger,
 ) *Client {
-	grpcClient := ssov1.NewAuthClient(cc)
+	grpcClient := ssov2.NewAuthClient(cc)
 
 	return &Client{
 		api: grpcClient,
@@ -26,11 +27,11 @@ func New(
 	}
 }
 
-func (c *Client) IsAdmin(ctx context.Context, userID int64) (bool, error) {
+func (c *Client) IsAdmin(ctx context.Context, userID uuid.UUID) (bool, error) {
 	const op = "sso_grpc.IsAdmin"
 
-	resp, err := c.api.IsAdmin(ctx, &ssov1.IsAdminRequest{
-		UserId: userID,
+	resp, err := c.api.IsAdmin(ctx, &ssov2.IsAdminRequest{
+		UserId: userID.String(),
 	})
 	if err != nil {
 		return false, fmt.Errorf("%s: %w", op, err)
@@ -42,7 +43,7 @@ func (c *Client) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 func (c *Client) Login(ctx context.Context, email string, passwd string, appId int32) (string, error) {
 	const op = "sso_grpc.Login"
 
-	resp, err := c.api.Login(ctx, &ssov1.LoginRequest{
+	resp, err := c.api.Login(ctx, &ssov2.LoginRequest{
 		Email:    email,
 		Password: passwd,
 		AppId:    appId,
@@ -55,17 +56,22 @@ func (c *Client) Login(ctx context.Context, email string, passwd string, appId i
 	return resp.Token, nil
 }
 
-func (c *Client) Register(ctx context.Context, email string, passwd string) (int64, error) {
-	const op = "sso_grpc.Login"
+func (c *Client) Register(ctx context.Context, email string, passwd string) (uuid.UUID, error) {
+	const op = "sso_grpc.Register"
 
-	resp, err := c.api.Register(ctx, &ssov1.RegisterRequest{
+	resp, err := c.api.Register(ctx, &ssov2.RegisterRequest{
 		Email:    email,
 		Password: passwd,
 	})
 
 	if err != nil {
-		return 0, fmt.Errorf("%s: %w", op, err)
+		return uuid.Nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return resp.UserId, nil
+	uid, err := uuid.Parse(resp.UserId)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("%s:%w", op, "failed to parse uid to uuid")
+	}
+
+	return uid, nil
 }
