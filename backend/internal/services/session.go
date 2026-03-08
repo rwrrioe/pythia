@@ -19,12 +19,12 @@ import (
 )
 
 type SessionProvider interface {
-	GetSession(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid int64) (*entities.Session, error)
-	ListSessions(ctx context.Context, q postgresql.Querier, uid int64) ([]entities.Session, error)
-	ListLatest(ctx context.Context, q postgresql.Querier, uid int64) ([]entities.Session, error)
-	SaveSession(ctx context.Context, q postgresql.Querier, ss entities.Session, uid int64) (uuid.UUID, error)
-	TryMarkFinished(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid int64, endedAt time.Time) (bool, error)
-	UpdateAccuracy(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid int64, accuracy float64) error
+	GetSession(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid uuid.UUID) (*entities.Session, error)
+	ListSessions(ctx context.Context, q postgresql.Querier, uid uuid.UUID) ([]entities.Session, error)
+	ListLatest(ctx context.Context, q postgresql.Querier, uid uuid.UUID) ([]entities.Session, error)
+	SaveSession(ctx context.Context, q postgresql.Querier, ss entities.Session, uid uuid.UUID) (uuid.UUID, error)
+	TryMarkFinished(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid uuid.UUID, endedAt time.Time) (bool, error)
+	UpdateAccuracy(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid uuid.UUID, accuracy float64) error
 }
 
 const (
