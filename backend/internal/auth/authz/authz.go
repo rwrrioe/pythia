@@ -15,7 +15,7 @@ var (
 )
 
 type AuthorizeService interface {
-	CanAccessSession(ctx context.Context, uid int64, sessionId uuid.UUID) error
+	CanAccessSession(ctx context.Context, uid uuid.UUID, sessionId uuid.UUID) error
 }
 
 type authorizer struct {
@@ -30,7 +30,7 @@ func NewAuthorizer(redis *taskstorage.RedisStorage, log *slog.Logger) AuthorizeS
 	}
 }
 
-func (a *authorizer) CanAccessSession(ctx context.Context, uid int64, sessionId uuid.UUID) error {
+func (a *authorizer) CanAccessSession(ctx context.Context, uid uuid.UUID, sessionId uuid.UUID) error {
 	const op = "authz.authorizer.CanAccessSession"
 
 	ss, ok, err := a.redis.GetSession(ctx, sessionId)
