@@ -4,6 +4,6 @@ import "github.com/google/uuid"
 
 type Deck struct {
 	Id         uuid.UUID
-	SessionId  int64
+	SessionId  uuid.UUID
 	Flashcards []FlashCard
 }
