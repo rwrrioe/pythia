@@ -66,7 +66,5 @@ Executing heavy operations (LLM translations, OCR) can take some time. Then, we 
 
 ![HeavyOperation](docs/assets/HeavyOperation.svg)
 
-For further development, it's planned to migrate to microservice architecture. [More on](docs/)
-documentation
-
+For further development, it's planned to migrate to microservice architecture. More about documentation and refactoring plan [here](docs/)
 
