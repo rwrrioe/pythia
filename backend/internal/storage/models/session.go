@@ -8,7 +8,7 @@ import (
 
 type Session struct {
 	Id        uuid.UUID `db:"id"`
-	UserId    int64     `db:"user_id"`
+	UserId    uuid.UUID `db:"user_id"`
 	Name      string    `db:"name"`
 	Lang      int       `db:"lang_id"`
 	Status    string    `db:"status"`
