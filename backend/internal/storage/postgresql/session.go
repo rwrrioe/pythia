@@ -40,13 +40,14 @@ func scanSession(row pgx.Row, m *models.Session) error {
 	)
 }
 
-func (s *SessionStorage) ListSessions(ctx context.Context, q Querier, uid int64) ([]entities.Session, error) {
+func (s *SessionStorage) ListSessions(ctx context.Context, q Querier, uid uuid.UUID) ([]entities.Session, error) {
 	const op = "postgresql.SessionStorage.ListSessions"
 
 	rows, err := q.Query(ctx,
 		`SELECT `+sessionCols+`
 			FROM sessions 
 			WHERE user_id=$1
+			AND status='finished'	
 			ORDER BY started_at DESC			
 			`, uid)
 	if err != nil {
@@ -81,7 +82,7 @@ func (s *SessionStorage) ListSessions(ctx context.Context, q Querier, uid int64)
 	return out, nil
 }
 
-func (s *SessionStorage) ListLatest(ctx context.Context, q Querier, uid int64) ([]entities.Session, error) {
+func (s *SessionStorage) ListLatest(ctx context.Context, q Querier, uid uuid.UUID) ([]entities.Session, error) {
 	const op = "postgresql.SessionStorage.ListLatestSessions"
 
 	rows, err := q.Query(ctx,
@@ -89,6 +90,7 @@ func (s *SessionStorage) ListLatest(ctx context.Context, q Querier, uid int64) (
 			 						FROM sessions 
 									WHERE user_id=$1 AND 
 									ended_at >= NOW() - INTERVAL '7 days' 
+									AND status='finished'
 			 						ORDER BY ended_at 
     								DESC LIMIT 4
 			`, uid)
@@ -124,7 +126,7 @@ func (s *SessionStorage) ListLatest(ctx context.Context, q Querier, uid int64) (
 	return out, nil
 }
 
-func (s *SessionStorage) GetSession(ctx context.Context, q Querier, sessionId uuid.UUID, uid int64) (*entities.Session, error) {
+func (s *SessionStorage) GetSession(ctx context.Context, q Querier, sessionId uuid.UUID, uid uuid.UUID) (*entities.Session, error) {
 	const op = "postgresql.SessionStorage.GetSession"
 
 	var m models.Session
@@ -153,7 +155,7 @@ func (s *SessionStorage) GetSession(ctx context.Context, q Querier, sessionId uu
 	return ss, nil
 }
 
-func (s *SessionStorage) SaveSession(ctx context.Context, q Querier, ss entities.Session, uid int64) (uuid.UUID, error) {
+func (s *SessionStorage) SaveSession(ctx context.Context, q Querier, ss entities.Session, uid uuid.UUID) (uuid.UUID, error) {
 	const op = "storage.SessionStorage.SaveSession"
 
 	var id uuid.UUID
@@ -185,7 +187,12 @@ func (s *SessionStorage) SaveSession(ctx context.Context, q Querier, ss entities
 	return id, nil
 }
 
-func (s *SessionStorage) TryMarkFinished(ctx context.Context, q Querier, sessionId uuid.UUID, uid int64, endedAt time.Time) (bool, error) {
+func (s *SessionStorage) TryMarkFinished(
+	ctx context.Context,
+	q Querier,
+	sessionId uuid.UUID,
+	uid uuid.UUID,
+	endedAt time.Time) (bool, error) {
 	const op = "postgresql.SessionStorage.MarkFinished"
 
 	cmd, err := q.Exec(ctx, `
@@ -209,7 +216,7 @@ func (s *SessionStorage) TryMarkFinished(ctx context.Context, q Querier, session
 				FROM sessions
 				WHERE id = $1 
 					AND user_id= $2
-			`).Scan(&status)
+			`, sessionId, uid).Scan(&status)
 
 		if errors.Is(err, pgx.ErrNoRows) {
 			return true, fmt.Errorf("%s:%w", op, ErrSessionNotFound)
@@ -219,13 +226,13 @@ func (s *SessionStorage) TryMarkFinished(ctx context.Context, q Querier, session
 			return false, nil
 		}
 
-		return true, fmt.Errorf("%s:%w", op, err)
+		return false, fmt.Errorf("%s:%w", op, err)
 	}
 
 	return true, nil
 }
 
-func (s *SessionStorage) UpdateAccuracy(ctx context.Context, q Querier, sessionId uuid.UUID, uid int64, accuracy float64) error {
+func (s *SessionStorage) UpdateAccuracy(ctx context.Context, q Querier, sessionId uuid.UUID, uid uuid.UUID, accuracy float64) error {
 	const op = "postgresql.SessionStorage.UpdateAccuracy"
 
 	cmd, err := q.Exec(ctx, `
