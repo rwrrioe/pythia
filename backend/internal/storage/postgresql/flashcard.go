@@ -34,7 +34,7 @@ func (s *FlashCardStorage) FlashcardsPool() *pgxpool.Pool {
 }
 
 // flashcards конкретной деки
-func (s *FlashCardStorage) ListByDeck(ctx context.Context, q Querier, deckId uuid.UUID, uid int64) ([]entities.FlashCard, error) {
+func (s *FlashCardStorage) ListByDeck(ctx context.Context, q Querier, deckId uuid.UUID, uid uuid.UUID) ([]entities.FlashCard, error) {
 	const op = "postgresql.FlashCardStorage.ListByDeck"
 
 	rows, err := q.Query(ctx,
@@ -75,7 +75,7 @@ func (s *FlashCardStorage) ListByDeck(ctx context.Context, q Querier, deckId uui
 }
 
 // flashcards пользователя
-func (s *FlashCardStorage) List(ctx context.Context, q Querier, uid int64) ([]entities.FlashCard, error) {
+func (s *FlashCardStorage) List(ctx context.Context, q Querier, uid uuid.UUID) ([]entities.FlashCard, error) {
 	const op = "postgresql.FlashCardStorage.List"
 
 	rows, err := q.Query(ctx,
@@ -115,7 +115,7 @@ func (s *FlashCardStorage) List(ctx context.Context, q Querier, uid int64) ([]en
 	return out, nil
 }
 
-func (s *FlashCardStorage) GetOrCreate(ctx context.Context, q Querier, flCard entities.FlashCard, uid int64) (uuid.UUID, error) {
+func (s *FlashCardStorage) GetOrCreate(ctx context.Context, q Querier, flCard entities.FlashCard, uid uuid.UUID) (uuid.UUID, error) {
 	const op = "postgresql.FlashCardStorage.GetOrCreate"
 
 	var id uuid.UUID
