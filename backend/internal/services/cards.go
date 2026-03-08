@@ -14,16 +14,16 @@ import (
 )
 
 type FlashCardProvider interface {
-	List(ctx context.Context, q postgresql.Querier, uid int64) ([]entities.FlashCard, error)
-	ListByDeck(ctx context.Context, q postgresql.Querier, deckId uuid.UUID, uid int64) ([]entities.FlashCard, error)
-	GetOrCreate(ctx context.Context, q postgresql.Querier, flCard entities.FlashCard, uid int64) (uuid.UUID, error)
+	List(ctx context.Context, q postgresql.Querier, uid uuid.UUID) ([]entities.FlashCard, error)
+	ListByDeck(ctx context.Context, q postgresql.Querier, deckId uuid.UUID, uid uuid.UUID) ([]entities.FlashCard, error)
+	GetOrCreate(ctx context.Context, q postgresql.Querier, flCard entities.FlashCard, uid uuid.UUID) (uuid.UUID, error)
 	FlashcardsPool() *pgxpool.Pool
 }
 
 type DeckProvider interface {
-	ListBySession(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid int64) (*entities.Deck, error)
+	ListBySession(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid uuid.UUID) (*entities.Deck, error)
 	AttachFlashcard(ctx context.Context, q postgresql.Querier, deckId uuid.UUID, flashcardId uuid.UUID) error
-	GetOrCreate(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid int64) (uuid.UUID, error)
+	GetOrCreate(ctx context.Context, q postgresql.Querier, sessionId uuid.UUID, uid uuid.UUID) (uuid.UUID, error)
 	DeckPool() *pgxpool.Pool
 }
 
