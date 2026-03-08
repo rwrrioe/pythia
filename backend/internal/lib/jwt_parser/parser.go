@@ -4,13 +4,14 @@ import (
 	"fmt"
 
 	jwt "github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type Claims struct {
-	UserId int64  `json:"uid"`
-	Email  string `json:"email"`
-	AppId  int64  `json:"app_id"`
-	Exp    int64  `json:"exp"`
+	UserId uuid.UUID `json:"uid"`
+	Email  string    `json:"email"`
+	AppId  int64     `json:"app_id"`
+	Exp    int64     `json:"exp"`
 	jwt.RegisteredClaims
 }
 
