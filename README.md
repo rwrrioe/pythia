@@ -55,7 +55,7 @@ task dev-up //backend
 
 ### Services
 
-Pythia is mainly written in Golang. There is main backend service, sso-service (auth/authn), OCR-python service.
+Pythia is mainly written in Golang. There are main backend service, sso-service (auth/authn), OCR-python service.
 
 ![Architecture](docs/assets/Architecture.svg)
 
@@ -66,7 +66,7 @@ Executing heavy operations (LLM translations, OCR) can take some time. Then, we 
 
 ![HeavyOperation](docs/assets/HeavyOperation.svg)
 
-For further development, it's planned to migrate to microservice architecture. More on
-documentation docs/API and Core 
+For further development, it's planned to migrate to microservice architecture. [More on](docs/)
+documentation
 
 
