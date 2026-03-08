@@ -39,7 +39,7 @@ services:
       - DB_PORT=5432
       - DB_NAME=pythiadb
       - OCR_HOST=ocr
-      - OCR_PORT=50051
+      - OCR_PORT=9080
       - SSO_HOST=sso
       - SSO_PORT=9081
       - OCR_TIMEOUT=1m
