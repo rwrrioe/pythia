@@ -26,7 +26,7 @@ func (s *DeckStorage) DeckPool() *pgxpool.Pool {
 	return s.pool
 }
 
-func (s *DeckStorage) ListBySession(ctx context.Context, q Querier, sessionId uuid.UUID, uid int64) (*entities.Deck, error) {
+func (s *DeckStorage) ListBySession(ctx context.Context, q Querier, sessionId uuid.UUID, uid uuid.UUID) (*entities.Deck, error) {
 	const op = "postgresql.DeckStorage.ListBySession"
 
 	var d models.Deck
@@ -49,7 +49,7 @@ func (s *DeckStorage) ListBySession(ctx context.Context, q Querier, sessionId uu
 	}, nil
 }
 
-func (s *DeckStorage) GetOrCreate(ctx context.Context, q Querier, sessionId uuid.UUID, uid int64) (uuid.UUID, error) {
+func (s *DeckStorage) GetOrCreate(ctx context.Context, q Querier, sessionId uuid.UUID, uid uuid.UUID) (uuid.UUID, error) {
 	const op = "postgresql.DeckStorage.GetOrCreate"
 
 	var id uuid.UUID
