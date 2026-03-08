@@ -63,22 +63,25 @@ func (h *LibraryHandler) GetSession(c *gin.Context) {
 
 	if err != nil {
 		if errors.Is(err, service.ErrUnauthorized) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": err.Error(),
-			})
-
-			if errors.Is(err, service.ErrSessionNotFound) {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error":   "session not found",
-					"details": err.Error(),
-				})
-			}
-
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
 		}
+
+		if errors.Is(err, service.ErrSessionNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   "session not found",
+				"details": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "internal error",
+			"details": err.Error(),
+		})
+		return
 	}
+
 	flashcards, err := h.flashcards.GetBySession(ctx, sessionId)
 
 	if err != nil {
@@ -86,19 +89,20 @@ func (h *LibraryHandler) GetSession(c *gin.Context) {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": err.Error(),
 			})
-
-			if errors.Is(err, service.ErrDeckNotFound) {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error":   "deck not found",
-					"details": err.Error(),
-				})
-			}
-
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
+			return
+		}
+		if errors.Is(err, service.ErrDeckNotFound) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "deck not found",
+				"details": err.Error(),
 			})
+			return
 		}
 
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
 	}
 
 	var dtos []entities.FlashCardDTO

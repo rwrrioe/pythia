@@ -2,7 +2,6 @@ package rest_handlers
 
 import (
 	"errors"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -38,7 +37,6 @@ func (h *SessionHandler) NewSession(c *gin.Context) {
 		})
 		return
 	}
-	log.Printf("new session req lang %d", req.LangId)
 
 	ctx := c.Request.Context()
 
@@ -52,7 +50,7 @@ func (h *SessionHandler) NewSession(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"session_id": id,
+		"session_id": id.String(),
 	})
 }
 
@@ -93,6 +91,7 @@ func (h *SessionHandler) EndSession(c *gin.Context) {
 		})
 		return
 	}
+
 	if err != nil && errors.Is(err, service.ErrSessionNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error":   "session not found",
