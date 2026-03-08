@@ -31,7 +31,7 @@ type RedisStorage struct {
 type SessionDTO struct {
 	Id        uuid.UUID       `json:"session_id"`
 	Name      string          `json:"name"`
-	UserId    int64           `json:"user_id"`
+	UserId    uuid.UUID       `json:"user_id"`
 	StartedAt time.Time       `json:"started_at"`
 	EndedAt   time.Time       `json:"ended_at"`
 	Duration  time.Duration   `json:"duration"`
@@ -68,7 +68,7 @@ func NewRedisStorage(ctx context.Context, add string, ttl time.Duration) (*Redis
 		&redis.FieldSchema{
 			FieldName: "$.session_id",
 			As:        "sessionId",
-			FieldType: redis.SearchFieldTypeNumeric,
+			FieldType: redis.SearchFieldTypeTag,
 		},
 	).Result()
 
@@ -114,7 +114,7 @@ func (s *RedisStorage) Get(ctx context.Context, taskId string) (*TaskDTO, bool, 
 }
 
 func (s *RedisStorage) GetBySession(ctx context.Context, sessionId uuid.UUID) ([]TaskDTO, bool, error) {
-	q := fmt.Sprintf("@sessionId:[%d %d]", sessionId, sessionId)
+	q := fmt.Sprintf(`@sessionId:{"%s"}`, sessionId.String())
 
 	res, err := s.client.FTSearchWithArgs(ctx, "idx:tasks", q, &redis.FTSearchOptions{
 		DialectVersion: 2,
@@ -180,7 +180,7 @@ func (s *RedisStorage) Delete(ctx context.Context, taskID string) error {
 }
 
 func (s *RedisStorage) SaveSession(ctx context.Context, ss SessionDTO) error {
-	key := fmt.Sprintf("session:%d", ss.Id)
+	key := fmt.Sprintf("session:%s", ss.Id.String())
 
 	b, err := json.Marshal(ss)
 	if err != nil {
@@ -194,7 +194,7 @@ func (s *RedisStorage) SaveSession(ctx context.Context, ss SessionDTO) error {
 }
 
 func (s *RedisStorage) GetSession(ctx context.Context, sessionId uuid.UUID) (*SessionDTO, bool, error) {
-	key := fmt.Sprintf("session:%d", sessionId)
+	key := fmt.Sprintf("session:%s", sessionId.String())
 
 	val, err := s.client.Get(ctx, key).Result()
 	if err != nil {
@@ -212,7 +212,7 @@ func (s *RedisStorage) GetSession(ctx context.Context, sessionId uuid.UUID) (*Se
 }
 
 func (s *RedisStorage) UpdateSession(ctx context.Context, sessionId uuid.UUID, update func(s *SessionDTO)) (bool, error) {
-	key := fmt.Sprintf("session:%d", sessionId)
+	key := fmt.Sprintf("session:%s", sessionId.String())
 
 	val, err := s.client.Get(ctx, key).Result()
 	if err != nil {
