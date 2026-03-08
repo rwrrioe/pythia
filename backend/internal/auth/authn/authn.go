@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rwrrioe/pythia/backend/internal/lib/jwt_parser"
 	"github.com/rwrrioe/pythia/backend/internal/lib/logger/sl"
 )
@@ -65,8 +66,8 @@ func extractBearerToken(authHeader string) string {
 	return strings.TrimSpace(splitToken[1])
 }
 
-func UIDFromContext(ctx context.Context) (int64, bool) {
-	uid, ok := ctx.Value(uidKey).(int64)
+func UIDFromContext(ctx context.Context) (uuid.UUID, bool) {
+	uid, ok := ctx.Value(uidKey).(uuid.UUID)
 	return uid, ok
 
 }
