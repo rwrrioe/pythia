@@ -70,7 +70,7 @@ func (c *Client) Register(ctx context.Context, email string, passwd string) (uui
 
 	uid, err := uuid.Parse(resp.UserId)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("%s:%w", op, "failed to parse uid to uuid")
+		return uuid.Nil, fmt.Errorf("%s:%s", op, "failed to parse uid to uuid")
 	}
 
 	return uid, nil
