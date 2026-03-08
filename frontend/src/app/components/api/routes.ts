@@ -10,21 +10,21 @@ export const routes = {
   // sessions (ВАЖНО: session, не sessions)
   createSession: "/session/new",
 
-  uploadFile: (sessionId: string | number) => `/session/${sessionId}/upload`,
+  uploadFile: (sessionId: string ) => `/session/${sessionId}/upload`,
 
-  finalizeWords: (sessionId: string | number) => `/session/${sessionId}/summary`,
+  finalizeWords: (sessionId: string) => `/session/${sessionId}/summary`,
 
-  getFlashcards: (sessionId: string | number) => `/session/${sessionId}/learn/flashcards`,
+  getFlashcards: (sessionId: string) => `/session/${sessionId}/learn/flashcards`,
 
-  getQuiz: (sessionId: string | number) => `/session/${sessionId}/learn/quiz`,
+  getQuiz: (sessionId: string ) => `/session/${sessionId}/learn/quiz`,
 
-  translateTask: (sessionId: string | number, taskId: string) =>
+  translateTask: (sessionId: string, taskId: string) =>
     `/session/${sessionId}/task/${taskId}/translate`,
 
-  endSession: (sessionId: string | number) => `/session/${sessionId}/end`,
+  endSession: (sessionId: string ) => `/session/${sessionId}/end`,
 
 
   librarySessions: "/library/session",
-  librarySession: (sessionId: string | number) => `/library/session/${sessionId}`,
+  librarySession: (sessionId: string ) => `/library/session/${sessionId}`,
 };
 

@@ -9,7 +9,7 @@ import { getFlashcards } from "./api/sessions";
 import { GreekPattern } from "./greek-pattern";
 
 type Props = {
-  sessionId: number | null;
+  sessionId: string | null;
   words?: SessionWord[]; // можно передать из App, чтобы не дергать второй раз
   onDone: () => void;
 };

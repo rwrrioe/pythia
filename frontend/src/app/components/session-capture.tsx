@@ -26,8 +26,8 @@ export interface SessionConfig {
 interface SessionCaptureProps {
   config: SessionConfig;
   durationSeconds: number;
-  sessionId: number;
-  onFinish: (words: SessionWord[], title: string, sessionId: number) => void;
+  sessionId: string;
+  onFinish: (words: SessionWord[], title: string, sessionId: string) => void;
   onCancel: () => void;
 }
 

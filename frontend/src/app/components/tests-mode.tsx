@@ -8,7 +8,7 @@ import { GreekPattern } from "./greek-pattern";
 import { getQuiz } from "./api/sessions";
 
 type Props = {
-  sessionId: number | null;
+  sessionId: string | null;
   onComplete: (score: number) => void;
   onBack: () => void;
 };

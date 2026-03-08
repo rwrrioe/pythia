@@ -3,7 +3,7 @@ import { apiFetch } from "./http";
 import { routes } from "./routes";
 
 export type LibrarySessionDto = {
-  Id: number;
+  session_id: string;
   name?: string;
   StartedAt?: string;
   ended_at?: string;
@@ -33,6 +33,6 @@ export async function getLibrarySessions(): Promise<LibrarySessionsResponse> {
   return apiFetch<LibrarySessionsResponse>(routes.librarySessions, { method: "GET" });
 }
 
-export async function getLibrarySession(sessionId: number | string): Promise<LibrarySessionDetailResponse> {
+export async function getLibrarySession(sessionId: string): Promise<LibrarySessionDetailResponse> {
   return apiFetch<LibrarySessionDetailResponse>(routes.librarySession(sessionId), { method: "GET" });
 }

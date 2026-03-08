@@ -1,6 +1,5 @@
-// src/app/components/api/ws.ts
 export type SessionWsMessage = {
-  session_id?: number;
+  session_id?: string;
   task_id?: string;
   stage?: string;
   status?: string;
@@ -24,18 +23,19 @@ function joinPath(base: string, path: string) {
   return `${b}${p}`;
 }
 
-export function openSessionWs(sessionId: number, onMessage: (msg: SessionWsMessage) => void) {
-  const origin = WS_ORIGIN
+export function openSessionWs(
+    session_id: string,
+    onMessage: (msg: SessionWsMessage) => void
+) {
+  const origin = WS_ORIGIN;
 
-  // IMPORTANT: set actual WS path here:
-  // If your backend really is root, set VITE_WS_PATH="" (empty) or "/"
-  // If backend uses /ws, set VITE_WS_PATH="/ws"
   const wsPath = ((import.meta as any)?.env?.VITE_WS_PATH ?? "/ws") as string;
 
-  const wsBase = toWsUrl(String(origin));
-  const baseWithPath = wsPath && wsPath !== "/" ? joinPath(wsBase, wsPath) : wsBase.replace(/\/+$/, "");
+  const wsBase = toWsUrl(origin);
+  const baseWithPath =
+      wsPath && wsPath !== "/" ? joinPath(wsBase, wsPath) : wsBase.replace(/\/+$/, "");
 
-  const url = `${baseWithPath}?session_id=${encodeURIComponent(String(sessionId))}`;
+  const url = `${baseWithPath}?session_id=${encodeURIComponent(session_id)}`;
 
   const ws = new WebSocket(url);
 
@@ -47,13 +47,10 @@ export function openSessionWs(sessionId: number, onMessage: (msg: SessionWsMessa
     }
   };
 
-  ws.onerror = (e) => {
-    console.error("WS error", e);
-  };
+  ws.onerror = (e) => console.error("WS error", e);
 
-  ws.onclose = (e) => {
-    console.warn("WS closed", { code: (e as any).code, reason: (e as any).reason });
-  };
+  ws.onclose = (e) =>
+      console.warn("WS closed", { code: (e as any).code, reason: (e as any).reason });
 
   return ws;
 }

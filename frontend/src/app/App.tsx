@@ -234,7 +234,7 @@ function SessionFlowRoutes() {
   const [finalWords, setFinalWords] = React.useState<SessionWord[]>([]);
   const [sessionScore, setSessionScore] = React.useState(0);
 
-  const [captureSessionId, setCaptureSessionId] = React.useState<number | null>(null);
+  const [captureSessionId, setCaptureSessionId] = React.useState<string | null>(null);
 
   const startNewSession = () => {
     setSessionConfig(null);
@@ -259,7 +259,7 @@ function SessionFlowRoutes() {
     navigate("/session/capture");
   };
 
-  const handleCaptureFinish = (_words: SessionWord[], _title: string, sessionId: number) => {
+  const handleCaptureFinish = (_words: SessionWord[], _title: string, sessionId: string) => {
     setCaptureSessionId(sessionId);
     navigate("/session/flashcards");
   };
